@@ -148,7 +148,7 @@ h1{
 .muted{color:var(--muted)}
 #game{display:none;flex-direction:column;align-items:center;gap:10px;width:100%}
 #topbar{
-  width:min(100%,920px);display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center
+  width:min(100%,920px);display:flex;justify-content:center
 }
 .score-pane,.center-pane{
   background:linear-gradient(180deg,rgba(20,40,30,.92),rgba(10,20,15,.95));
@@ -330,22 +330,17 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
 
   <div id="game">
     <div id="topbar">
-      <div id="p1-pane" class="score-pane">
-        <div class="player-label">Red</div>
-        <div id="p1-name" class="player-name red">Player 1</div>
-        <div id="p1-balls" class="ball-strip"></div>
-      </div>
       <div class="center-pane">
         <div id="turn-label">Break</div>
-        <div id="phase-label">Both marked balls must bank off the right cushion.</div>
-        <div id="matchup-live"></div>
+        <div id="phase-label"></div>
         <div id="conn-status"></div>
       </div>
-      <div id="p2-pane" class="score-pane">
-        <div class="player-label">White</div>
-        <div id="p2-name" class="player-name white">Player 2</div>
-        <div id="p2-balls" class="ball-strip"></div>
-      </div>
+    </div>
+    <!-- hidden but kept for JS refs -->
+    <div style="display:none">
+      <div id="p1-pane"><div id="p1-name"></div><div id="p1-balls"></div></div>
+      <div id="p2-pane"><div id="p2-name"></div><div id="p2-balls"></div></div>
+      <div id="matchup-live"></div>
     </div>
 
     <div id="table-shell">
@@ -1259,14 +1254,14 @@ function updateTurnUI() {
   if (over) return;
   if (phase === 'break') {
     $('turn-label').textContent = brk[myRole] ? 'Waiting On Break' : 'Simultaneous Break';
-    $('phase-label').textContent = breakShooting ? 'Balls in motion...' : isAI && brk[myRole] ? 'CPU is lining up the matching break.' : 'Shoot your marked ball to your RIGHT and bank it into the far pocket.';
+    $('phase-label').textContent = breakShooting ? '' : isAI && brk[myRole] ? '' : 'Bank marked ball off right rail';
   } else if (curP === myRole) {
     const mustMarked = markedBallFor(myRole) && !markedBallFor(myRole).out;
     $('turn-label').textContent = 'Your Shot';
-    $('phase-label').textContent = mustMarked ? 'Tap your marked ball and pull away to aim.' : 'Tap a ball and pull away to aim and shoot.';
+    $('phase-label').textContent = '';
   } else {
     $('turn-label').textContent = isAI ? 'CPU Thinking' : 'Waiting...';
-    $('phase-label').textContent = `Watching ${roleName(curP)} line up the next shot.`;
+    $('phase-label').textContent = '';
   }
   updateConnStatus();
 }

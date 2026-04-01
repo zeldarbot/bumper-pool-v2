@@ -1106,9 +1106,9 @@ function rackBalls() {
   // Other 4 balls in two pairs flanking the pocket bumpers on the OUTSIDE
   // This keeps the center lane clear for the break shot
   const frontOffset = 38; // marked ball distance from pocket rail
-  const pairGap = 26;     // spacing between balls in each pair
-  // Pocket bumpers are at CX±28; balls go outside them
-  const innerX = 56;      // first ball offset from center (outside bumper)
+  const pairGap = 30;     // spacing between balls in each pair
+  // Pocket bumpers are at CX±28; balls go well outside them
+  const innerX = 68;      // first ball offset from center (outside bumper)
   const outerX = innerX + pairGap; // second ball further out
   const pairY = 28;       // pair vertical offset from rail (same height as pocket bumpers)
   const p1y = IB - frontOffset;
@@ -1169,6 +1169,7 @@ function initGameState() {
   Confetti.stop();
   updateScoreboard();
   updateTurnUI();
+  autoShowCue();
   if (af) cancelAnimationFrame(af);
   loop();
 }
@@ -1270,6 +1271,23 @@ function canIShoot() {
   if (isAI && curP !== myRole) return false;
   if (phase === 'break') return !brk[myRole];
   return curP === myRole;
+}
+
+function autoShowCue() {
+  // Auto-select the legal ball and show cue stick when it's your turn
+  if (!canIShoot() || cue.dragging) return;
+  const legal = legalCueBalls(myRole);
+  if (legal.length === 1) {
+    setCueBall(legal[0], false);
+    // Default aim toward opponent's pocket
+    const target = targetPocketFor(myRole);
+    if (target) cue.angle = Math.atan2(target.y - legal[0].y, target.x - legal[0].x);
+  } else if (legal.length > 1 && !cue.active) {
+    // Multiple legal balls — select the first one as default
+    setCueBall(legal[0], false);
+    const target = targetPocketFor(myRole);
+    if (target) cue.angle = Math.atan2(target.y - legal[0].y, target.x - legal[0].x);
+  }
 }
 
 function moving() {
@@ -1756,6 +1774,7 @@ function stopped() {
   opponentAim = { active:false, ballIdx:-1, angle:-Math.PI / 2, power:0 };
   updateScoreboard();
   updateTurnUI();
+  autoShowCue();
   if (isHost && connected) {
     const state = getFullState();
     send(state);
@@ -2374,8 +2393,9 @@ function onUp(e) {
     const vy = Math.sin(cue.angle) * cue.power * MAX_SHOT_POWER;
     performShot(myRole, cue.ballIdx, vx, vy, phase === 'break');
   }
-  clearCue();
+  clearCue(false);
   updateTurnUI();
+  autoShowCue();
   maybeScheduleAITurn();
 }
 

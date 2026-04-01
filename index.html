@@ -2278,23 +2278,70 @@ function drawCueActor(ball, angle, power, alpha = 1) {
     Xx.fill();
   }
 
-  Xx.beginPath();
-  Xx.moveTo(farX + px * 5, farY + py * 5);
-  Xx.lineTo(farX - px * 5, farY - py * 5);
-  Xx.lineTo(nearX - px * 2.3, nearY - py * 2.3);
-  Xx.lineTo(nearX + px * 2.3, nearY + py * 2.3);
-  Xx.closePath();
-  const wood = Xx.createLinearGradient(farX, farY, nearX, nearY);
-  wood.addColorStop(0, '#7e4e26');
-  wood.addColorStop(.35, '#c7995b');
-  wood.addColorStop(.68, '#7f4f26');
-  wood.addColorStop(.92, '#f4ead1');
-  wood.addColorStop(1, '#2f2015');
-  Xx.fillStyle = wood;
-  Xx.fill();
-  Xx.strokeStyle = 'rgba(0,0,0,.3)';
-  Xx.lineWidth = 1;
-  Xx.stroke();
+  // Full pool cue rendering — tip → ferrule → shaft → joint → wrap → butt → bumper
+  const total = cueLen;
+  const tipLen = 3, ferruleLen = 10, shaftLen = total * .52, jointLen = 6;
+  const wrapLen = total * .18, buttLen = total - tipLen - ferruleLen - shaftLen - jointLen - wrapLen - 4;
+  const bumperLen = 4;
+
+  function cueQuad(startT, endT, wNear, wFar, fill, stroke) {
+    const sx = nearX - dx * startT, sy = nearY - dy * startT;
+    const ex = nearX - dx * endT, ey = nearY - dy * endT;
+    Xx.beginPath();
+    Xx.moveTo(sx + px * wNear, sy + py * wNear);
+    Xx.lineTo(ex + px * wFar, ey + py * wFar);
+    Xx.lineTo(ex - px * wFar, ey - py * wFar);
+    Xx.lineTo(sx - px * wNear, sy - py * wNear);
+    Xx.closePath();
+    Xx.fillStyle = fill; Xx.fill();
+    if (stroke) { Xx.strokeStyle = stroke; Xx.lineWidth = .5; Xx.stroke(); }
+  }
+
+  let t = 0;
+  // Tip — soft blue/green chalk
+  cueQuad(t, t + tipLen, 1.5, 2, '#6ba3a0', 'rgba(0,0,0,.2)');
+  t += tipLen;
+  // Ferrule — white plastic
+  cueQuad(t, t + ferruleLen, 2, 2.2, '#f0ece4', 'rgba(0,0,0,.15)');
+  t += ferruleLen;
+  // Shaft — pale maple, light wood
+  const shaftG = Xx.createLinearGradient(
+    nearX - dx * t, nearY - dy * t,
+    nearX - dx * (t + shaftLen), nearY - dy * (t + shaftLen));
+  shaftG.addColorStop(0, '#f5ddb3');
+  shaftG.addColorStop(.3, '#eed9a8');
+  shaftG.addColorStop(.7, '#e8c88a');
+  shaftG.addColorStop(1, '#dbb870');
+  cueQuad(t, t + shaftLen, 2.2, 3.2, shaftG, 'rgba(120,80,30,.15)');
+  t += shaftLen;
+  // Joint — metal ring
+  cueQuad(t, t + jointLen, 3.2, 3.4, '#c0b8a8', 'rgba(60,50,30,.3)');
+  t += jointLen;
+  // Wrap — dark leather/linen with cross-hatch pattern
+  const wrapG = Xx.createLinearGradient(
+    nearX - dx * t, nearY - dy * t,
+    nearX - dx * (t + wrapLen), nearY - dy * (t + wrapLen));
+  wrapG.addColorStop(0, '#1a1a1a');
+  wrapG.addColorStop(.25, '#2a2218');
+  wrapG.addColorStop(.5, '#1a1a1a');
+  wrapG.addColorStop(.75, '#2a2218');
+  wrapG.addColorStop(1, '#1a1a1a');
+  cueQuad(t, t + wrapLen, 3.4, 4, wrapG, 'rgba(0,0,0,.25)');
+  t += wrapLen;
+  // Butt — dark stained wood
+  const buttG = Xx.createLinearGradient(
+    nearX - dx * t, nearY - dy * t,
+    nearX - dx * (t + buttLen), nearY - dy * (t + buttLen));
+  buttG.addColorStop(0, '#5a3518');
+  buttG.addColorStop(.2, '#7e4e26');
+  buttG.addColorStop(.5, '#5a3518');
+  buttG.addColorStop(.8, '#4a2a12');
+  buttG.addColorStop(1, '#3a1e0c');
+  cueQuad(t, t + buttLen, 4, 4.8, buttG, 'rgba(0,0,0,.2)');
+  t += buttLen;
+  // Rubber bumper
+  cueQuad(t, t + bumperLen, 4.8, 4.2, '#1a1a1a', 'rgba(0,0,0,.3)');
+
   Xx.restore();
 }
 

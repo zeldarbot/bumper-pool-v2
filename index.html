@@ -2066,34 +2066,29 @@ function drawBumpers() {
     // Shadow
     Xx.beginPath(); Xx.arc(bp.x + 1.5, bp.y + 2.8, BPR + 2, 0, Math.PI * 2);
     Xx.fillStyle = 'rgba(0,0,0,.35)'; Xx.fill();
-    // Rubber base ring (dark, flat — visually distinct from shiny balls)
+    // Colored ring (red or white)
     Xx.beginPath(); Xx.arc(bp.x, bp.y, BPR, 0, Math.PI * 2);
-    Xx.fillStyle = '#1a1a1a'; Xx.fill();
-    // Inner rubber top — matte colored disc (smaller than base)
-    const topR = BPR * .72;
-    const g = Xx.createRadialGradient(bp.x - 1, bp.y - 1, 0, bp.x, bp.y, topR);
-    if (bp.col === 'red') {
-      g.addColorStop(0, '#cc3333');
-      g.addColorStop(.6, '#991a1a');
-      g.addColorStop(1, '#661111');
-    } else {
-      g.addColorStop(0, '#e0e0e0');
-      g.addColorStop(.6, '#aaaaaa');
-      g.addColorStop(1, '#777777');
-    }
+    Xx.fillStyle = bp.col === 'red' ? '#b82020' : '#d8d8d8';
+    Xx.fill();
+    // Wood body (main bumper surface)
+    const topR = BPR - 3;
+    const g = Xx.createRadialGradient(bp.x - 2, bp.y - 2, 1, bp.x, bp.y, topR);
+    g.addColorStop(0, '#c7995b');
+    g.addColorStop(.35, '#a07038');
+    g.addColorStop(.7, '#7e4e26');
+    g.addColorStop(1, '#5a3518');
     Xx.beginPath(); Xx.arc(bp.x, bp.y, topR, 0, Math.PI * 2);
     Xx.fillStyle = g; Xx.fill();
-    // Small center dot (like a screw head)
-    Xx.beginPath(); Xx.arc(bp.x, bp.y, 2.5, 0, Math.PI * 2);
-    Xx.fillStyle = 'rgba(0,0,0,.4)'; Xx.fill();
-    // Outer ring
+    // Wood highlight
+    Xx.beginPath(); Xx.arc(bp.x - 2.5, bp.y - 3, topR * .32, 0, Math.PI * 2);
+    Xx.fillStyle = 'rgba(255,240,200,.28)'; Xx.fill();
+    // Center dot
+    Xx.beginPath(); Xx.arc(bp.x, bp.y, 2, 0, Math.PI * 2);
+    Xx.fillStyle = 'rgba(0,0,0,.3)'; Xx.fill();
+    // Outer colored ring edge
     Xx.beginPath(); Xx.arc(bp.x, bp.y, BPR, 0, Math.PI * 2);
-    Xx.strokeStyle = bp.col === 'red' ? 'rgba(80,10,10,.5)' : 'rgba(60,60,60,.4)';
-    Xx.lineWidth = 1.8; Xx.stroke();
-    // Inner ring
-    Xx.beginPath(); Xx.arc(bp.x, bp.y, topR, 0, Math.PI * 2);
-    Xx.strokeStyle = 'rgba(255,255,255,.12)';
-    Xx.lineWidth = .8; Xx.stroke();
+    Xx.strokeStyle = bp.col === 'red' ? 'rgba(120,15,15,.6)' : 'rgba(180,180,180,.5)';
+    Xx.lineWidth = 1.5; Xx.stroke();
   });
 }
 

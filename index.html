@@ -252,9 +252,9 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
           <div class="step-head">
             <div>
               <div class="step-meta">Step 2</div>
-              <h3>Create or join</h3>
+              <h3>Create, join, or play solo</h3>
             </div>
-            <div class="step-copy">Creating opens a room instantly. Joining connects to whoever shared the code. The opponent becomes your matchup automatically once connected.</div>
+            <div class="step-copy">Create and join still use a private WebRTC room. AI mode skips the waiting room and starts a local match against the CPU instantly.</div>
           </div>
           <div class="mode-grid">
             <div class="action-card">
@@ -273,6 +273,14 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
               </div>
               <input id="join-input" class="field" placeholder="CODE" maxlength="4" style="text-transform:uppercase">
               <button class="secondary-btn" id="join-btn">Join Room</button>
+            </div>
+            <div class="action-card">
+              <div>
+                <div class="section-title">Solo</div>
+                <h4>Play vs AI</h4>
+                <p>Start immediately against a local CPU opponent. You play red as Player 1. The CPU plays white as Player 2.</p>
+              </div>
+              <button class="secondary-btn" id="ai-btn">Play vs AI</button>
             </div>
           </div>
           <div class="step-actions">
@@ -610,6 +618,7 @@ $('add-player-btn').addEventListener('click', addPlayer);
 $('new-player-input').addEventListener('keydown', e => { if (e.key === 'Enter') addPlayer(); });
 $('continue-btn').addEventListener('click', () => { if (ensurePlayerSelected()) setLobbyStep('mode'); });
 $('back-to-players-btn').addEventListener('click', () => setLobbyStep('player'));
+$('ai-btn').addEventListener('click', startAIGame);
 $('back-to-mode-btn').addEventListener('click', () => {
   if (peer && !peer.destroyed) { try { peer.destroy(); } catch (e) {} }
   peer = null;
@@ -622,12 +631,16 @@ $('back-to-mode-btn').addEventListener('click', () => {
   if (reconnectTimer) clearTimeout(reconnectTimer);
   reconnectTimer = null;
   currentCode = '';
+  isAI = false;
+  clearAITimers();
   setStatus('');
   history.replaceState(null, '', window.location.pathname);
   setLobbyStep('mode');
 });
 
 let peer, conn, isHost = false, myRole = null;
+let isAI = false;
+let aiRole = 'p2';
 let connected = false;
 let currentCode = '';
 let reconnectAttempts = 0;
@@ -640,6 +653,9 @@ let gameStarted = false;
 let msgQueue = [];
 let syncTimer = null;
 let scoreSyncSent = false;
+let aiTimer = null;
+let aiAimTimer = null;
+let aiTurnToken = 0;
 const MAX_RECONNECT = 10;
 
 function genCode() {
@@ -723,9 +739,19 @@ function showWaitingStep(title, copy, showShare = false) {
   setLobbyStep('waiting');
 }
 
+function clearAITimers() {
+  aiTurnToken++;
+  if (aiTimer) clearTimeout(aiTimer);
+  if (aiAimTimer) clearTimeout(aiAimTimer);
+  aiTimer = null;
+  aiAimTimer = null;
+  opponentAim = { active:false, ballIdx:-1 };
+}
+
 function createGame() {
   if (!ensurePlayerSelected()) return;
   AudioEngine.init();
+  isAI = false;
   currentCode = genCode();
   isHost = true;
   myRole = 'p1';
@@ -741,6 +767,7 @@ function createGame() {
 function joinGame() {
   if (!ensurePlayerSelected()) return;
   AudioEngine.init();
+  isAI = false;
   const code = $('join-input').value.toUpperCase().trim();
   if (code.length !== 4) { setStatus('Enter a valid four-character code.'); return; }
   currentCode = code;
@@ -752,6 +779,27 @@ function joinGame() {
   showWaitingStep('Joining room', 'Connecting to the host and waiting for the handshake to complete.', false);
   setStatus('Connecting...');
   initPeerAsGuest();
+}
+
+function startAIGame() {
+  if (!ensurePlayerSelected()) return;
+  AudioEngine.init();
+  if (peer && !peer.destroyed) { try { peer.destroy(); } catch (e) {} }
+  peer = null;
+  conn = null;
+  connected = false;
+  isHost = false;
+  isAI = true;
+  currentCode = '';
+  myRole = 'p1';
+  scoreSyncSent = false;
+  stopHeartbeat();
+  clearAITimers();
+  playerProfiles.p1 = { name: selectedPlayer || 'Player 1' };
+  playerProfiles.p2 = { name: 'CPU' };
+  history.replaceState(null, '', window.location.pathname);
+  hideDisconnectOverlay();
+  startGame();
 }
 
 function initPeerAsHost() {
@@ -845,6 +893,7 @@ function setupConn() {
 }
 
 function send(msg) {
+  if (isAI) return false;
   if (conn && conn.open && connected) {
     try { conn.send(msg); return true; } catch(e) {}
   }
@@ -885,6 +934,10 @@ function stopHeartbeat() {
 
 function updateConnStatus() {
   if (!gameStarted) { $('conn-status').textContent = ''; return; }
+  if (isAI) {
+    $('conn-status').innerHTML = '<span class="conn-dot conn-green"></span>Local CPU Match';
+    return;
+  }
   const dot = `<span class="conn-dot conn-${connQuality}"></span>`;
   $('conn-status').innerHTML = connQuality === 'green' ? `${dot}${latency || 0}ms` : connQuality === 'yellow' ? `${dot}Weak` : `${dot}Lost`;
 }
@@ -964,13 +1017,20 @@ const POCKETS = [
   { x: CX, y: IB, targetFor:'p2', homeFor:'p1' }
 ];
 
+// Regulation cross pattern: 4 pocket bumpers + 8 center cross
+// Center cross has alternating red/white bumper colors
+// Vertical arm (in line with pockets): red, white, gap, white, red
+// Horizontal arm: white, red, gap, red, white
 const BUMPERS = [
-  { x: CX - 28, y: IT + 18 }, { x: CX + 28, y: IT + 18 },
-  { x: CX - 28, y: IB - 18 }, { x: CX + 28, y: IB - 18 },
-  { x: CX, y: CY - 72 }, { x: CX, y: CY - 36 },
-  { x: CX, y: CY + 36 }, { x: CX, y: CY + 72 },
-  { x: CX - 72, y: CY }, { x: CX - 36, y: CY },
-  { x: CX + 36, y: CY }, { x: CX + 72, y: CY }
+  // Pocket bumpers (2 flanking each pocket)
+  { x: CX - 28, y: IT + 18, col: 'red' }, { x: CX + 28, y: IT + 18, col: 'white' },
+  { x: CX - 28, y: IB - 18, col: 'white' }, { x: CX + 28, y: IB - 18, col: 'red' },
+  // Center cross — vertical arm (top to bottom)
+  { x: CX, y: CY - 66, col: 'red' }, { x: CX, y: CY - 33, col: 'white' },
+  { x: CX, y: CY + 33, col: 'white' }, { x: CX, y: CY + 66, col: 'red' },
+  // Center cross — horizontal arm (left to right)
+  { x: CX - 66, y: CY, col: 'white' }, { x: CX - 33, y: CY, col: 'red' },
+  { x: CX + 33, y: CY, col: 'red' }, { x: CX + 66, y: CY, col: 'white' }
 ];
 
 function generateFelt() {
@@ -1017,19 +1077,26 @@ function mk(x, y, col, pl, m) {
 }
 
 function rackBalls() {
-  const topY = IT + 64;
-  const bottomY = IB - 64;
+  // Regulation: marked ball directly in front of home pocket
+  // Other 4 balls in a horizontal line (2 on each side), straddling the pocket
+  // This mirrors the reference image layout
+  const gap = 26; // horizontal spacing between balls
+  const p1y = IB - 42; // red marked ball, in front of bottom pocket
+  const p2y = IT + 42; // white marked ball, in front of top pocket
+  const rowOffset = 28; // how far back the 4 flanking balls sit from the marked ball
   return [
-    mk(CX, bottomY, '#c92b2b', 'p1', true),
-    mk(CX - 34, bottomY - 14, '#b81f1f', 'p1', false),
-    mk(CX - 68, bottomY - 36, '#b81f1f', 'p1', false),
-    mk(CX + 34, bottomY - 14, '#b81f1f', 'p1', false),
-    mk(CX + 68, bottomY - 36, '#b81f1f', 'p1', false),
-    mk(CX, topY, '#eceef2', 'p2', true),
-    mk(CX - 34, topY + 14, '#dadfe7', 'p2', false),
-    mk(CX - 68, topY + 36, '#dadfe7', 'p2', false),
-    mk(CX + 34, topY + 14, '#dadfe7', 'p2', false),
-    mk(CX + 68, topY + 36, '#dadfe7', 'p2', false)
+    // Red balls — P1 home is bottom pocket, shoots toward top
+    mk(CX, p1y, '#c92b2b', 'p1', true),                           // marked, centered in front of pocket
+    mk(CX - gap, p1y - rowOffset, '#b81f1f', 'p1', false),        // left inner
+    mk(CX - gap * 2, p1y - rowOffset, '#b81f1f', 'p1', false),   // left outer
+    mk(CX + gap, p1y - rowOffset, '#b81f1f', 'p1', false),        // right inner
+    mk(CX + gap * 2, p1y - rowOffset, '#b81f1f', 'p1', false),   // right outer
+    // White balls — P2 home is top pocket, shoots toward bottom
+    mk(CX, p2y, '#eceef2', 'p2', true),                           // marked, centered in front of pocket
+    mk(CX - gap, p2y + rowOffset, '#dadfe7', 'p2', false),        // left inner
+    mk(CX - gap * 2, p2y + rowOffset, '#dadfe7', 'p2', false),   // left outer
+    mk(CX + gap, p2y + rowOffset, '#dadfe7', 'p2', false),        // right inner
+    mk(CX + gap * 2, p2y + rowOffset, '#dadfe7', 'p2', false),   // right outer
   ];
 }
 
@@ -1044,6 +1111,7 @@ function startGame() {
 }
 
 function initGameState() {
+  clearAITimers();
   over = false;
   phase = 'break';
   curP = 'p1';
@@ -1062,6 +1130,8 @@ function initGameState() {
   resultRecorded = false;
   stateSeq = 0;
   lastSyncedSeq = 0;
+  latency = 0;
+  connQuality = 'green';
   $('ov').classList.remove('show');
   $('rb').disabled = false;
   $('rb').textContent = 'Play Again';
@@ -1074,8 +1144,8 @@ function initGameState() {
 }
 
 function startSyncLoop() {
-  if (!isHost) return;
   if (syncTimer) clearInterval(syncTimer);
+  if (isAI || !isHost) return;
   syncTimer = setInterval(() => {
     if (connected && gameStarted && moving()) send(getFullState());
   }, 4000);
@@ -1151,13 +1221,13 @@ function updateTurnUI() {
   if (phase === 'break') {
     $('turn-label').textContent = brk[myRole] ? 'Waiting On Break' : 'Simultaneous Break';
     const rightRail = myRole === 'p1' ? 'right rail' : 'left rail';
-    $('phase-label').textContent = breakShooting ? 'Balls in motion...' : `Pocket your marked ball after banking off the ${rightRail}.`;
+    $('phase-label').textContent = breakShooting ? 'Balls in motion...' : isAI && brk[myRole] ? 'CPU is lining up the matching break.' : `Pocket your marked ball after banking off the ${rightRail}.`;
   } else if (curP === myRole) {
     const mustMarked = markedBallFor(myRole) && !markedBallFor(myRole).out;
     $('turn-label').textContent = 'Your Shot';
     $('phase-label').textContent = mustMarked ? 'Marked ball must score first.' : 'Shoot any of your remaining balls.';
   } else {
-    $('turn-label').textContent = 'Waiting...';
+    $('turn-label').textContent = isAI ? 'CPU Thinking' : 'Waiting...';
     $('phase-label').textContent = `Watching ${roleName(curP)} line up the next shot.`;
   }
   updateConnStatus();
@@ -1167,6 +1237,7 @@ function markedBallFor(role) { return balls.find(b => b.pl === role && b.m); }
 
 function canIShoot() {
   if (over || moving() || firing) return false;
+  if (isAI && curP !== myRole) return false;
   if (phase === 'break') return !brk[myRole];
   return curP === myRole;
 }
@@ -1260,6 +1331,212 @@ function targetPocketFor(role) {
   return POCKETS.find(p => p.targetFor === role);
 }
 
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function rand(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function degToRad(deg) {
+  return deg * Math.PI / 180;
+}
+
+function angleDiff(a, b) {
+  let d = a - b;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return Math.abs(d);
+}
+
+function segmentPointDistance(x1, y1, x2, y2, px, py) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy || 1;
+  const t = clamp(((px - x1) * dx + (py - y1) * dy) / lenSq, 0, 1);
+  const sx = x1 + dx * t;
+  const sy = y1 + dy * t;
+  return Math.hypot(px - sx, py - sy);
+}
+
+function pathBlocked(x1, y1, x2, y2, ignoreBall = null, pad = BR * 2 - 1) {
+  const minX = Math.min(x1, x2);
+  const maxX = Math.max(x1, x2);
+  const minY = Math.min(y1, y2);
+  const maxY = Math.max(y1, y2);
+  if (minX < IL + BR - 2 || maxX > IR - BR + 2 || minY < IT + BR - 2 || maxY > IB - BR + 2) return true;
+  if (BUMPERS.some(bp => segmentPointDistance(x1, y1, x2, y2, bp.x, bp.y) < BPR + BR + 2)) return true;
+  return balls.some(other => {
+    if (other === ignoreBall || other.out || other.pocket) return false;
+    return segmentPointDistance(x1, y1, x2, y2, other.x, other.y) < pad;
+  });
+}
+
+function legalBallsFor(role) {
+  const marked = markedBallFor(role);
+  if (marked && !marked.out) return [marked];
+  return balls.filter(b => b.pl === role && !b.out && !b.pocket);
+}
+
+function mirroredPocketPoint(role, side) {
+  const pocket = targetPocketFor(role);
+  if (!pocket) return null;
+  return { x: side === 'left' ? 2 * IL - pocket.x : 2 * IR - pocket.x, y: pocket.y };
+}
+
+function bankRailXFor(role) {
+  return role === 'p1' ? IR : IL;
+}
+
+function createDirectShot(ball, role) {
+  const pocket = targetPocketFor(role);
+  if (!pocket) return null;
+  if (pathBlocked(ball.x, ball.y, pocket.x, pocket.y, ball)) return null;
+  const dx = pocket.x - ball.x;
+  const dy = pocket.y - ball.y;
+  const dist = Math.hypot(dx, dy) || 1;
+  const shotAngle = Math.atan2(dy, dx);
+  const idealAngle = role === 'p2' ? Math.PI / 2 : -Math.PI / 2;
+  const anglePenalty = angleDiff(shotAngle, idealAngle) / Math.PI;
+  return {
+    type:'direct',
+    ballIdx: balls.indexOf(ball),
+    angle: shotAngle,
+    power: clamp(6.8 + dist / 34, 5.8, 14.8),
+    score: 92 - dist * .12 - anglePenalty * 26
+  };
+}
+
+function createBankShot(ball, role) {
+  const side = role === 'p2' ? 'left' : 'right';
+  const mirrored = mirroredPocketPoint(role, side);
+  if (!mirrored) return null;
+  const dx = mirrored.x - ball.x;
+  const dy = mirrored.y - ball.y;
+  const scale = ((side === 'left' ? IL : IR) - ball.x) / (dx || 1e-6);
+  if (scale <= 0 || scale >= 1) return null;
+  const railY = ball.y + dy * scale;
+  if (railY < IT + PR + 4 || railY > IB - PR - 4) return null;
+  const railX = bankRailXFor(role);
+  const pocket = targetPocketFor(role);
+  if (pathBlocked(ball.x, ball.y, railX, railY, ball)) return null;
+  if (pathBlocked(railX, railY, pocket.x, pocket.y, ball)) return null;
+  const dist = Math.hypot(dx, dy);
+  return {
+    type:'bank',
+    ballIdx: balls.indexOf(ball),
+    angle: Math.atan2(railY - ball.y, railX - ball.x),
+    power: clamp(8.2 + dist / 28, 7.5, 15.6),
+    score: 58 - dist * .08 - Math.abs(railY - pocket.y) * .03
+  };
+}
+
+function createSafetyShot(role) {
+  const legal = legalBallsFor(role);
+  if (!legal.length) return null;
+  const opponentPocket = targetPocketFor(role === 'p1' ? 'p2' : 'p1');
+  const preferred = legal.sort((a, b) => Math.abs(a.x - CX) - Math.abs(b.x - CX))[0];
+  let angle = role === 'p2' ? Math.PI / 2 : -Math.PI / 2;
+  if (opponentPocket) angle = Math.atan2(preferred.y - opponentPocket.y, preferred.x - opponentPocket.x);
+  angle += degToRad(rand(-12, 12));
+  return {
+    type:'safety',
+    ballIdx: balls.indexOf(preferred),
+    angle,
+    power: rand(4.1, 5.8),
+    score: 24
+  };
+}
+
+function planAIShot(role) {
+  const legal = legalBallsFor(role);
+  const candidates = [];
+  legal.forEach(ball => {
+    const direct = createDirectShot(ball, role);
+    if (direct) candidates.push(direct);
+    const bank = createBankShot(ball, role);
+    if (bank) candidates.push(bank);
+  });
+  if (!candidates.length) return createSafetyShot(role);
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0];
+}
+
+function planAIBreak(role) {
+  const marked = markedBallFor(role);
+  if (!marked || marked.out) return null;
+  const pocket = targetPocketFor(role);
+  const railX = bankRailXFor(role);
+  const mirrored = role === 'p2' ? { x: 2 * IL - pocket.x, y: pocket.y } : { x: 2 * IR - pocket.x, y: pocket.y };
+  const angle = Math.atan2(mirrored.y - marked.y, mirrored.x - marked.x);
+  const railY = marked.y + (mirrored.y - marked.y) * ((railX - marked.x) / ((mirrored.x - marked.x) || 1e-6));
+  return {
+    type:'break',
+    ballIdx: balls.indexOf(marked),
+    angle,
+    power: clamp(11.8 + Math.abs(railY - pocket.y) / 50, 11, 14.8),
+    score: 60
+  };
+}
+
+function applyShotVariance(shot, role, phaseName = phase) {
+  const angleSpread = phaseName === 'break' ? 3 : rand(3, 5);
+  const powerScale = phaseName === 'break' ? rand(.94, 1.06) : rand(.9, 1.1);
+  const signBias = role === 'p2' ? 1 : -1;
+  const angle = shot.angle + degToRad(rand(-angleSpread, angleSpread)) + degToRad(rand(-1.2, 1.2) * signBias * .15);
+  const power = clamp(shot.power * powerScale, 3.8, 16);
+  return {
+    ballIdx: shot.ballIdx,
+    vx: Math.cos(angle) * power,
+    vy: Math.sin(angle) * power
+  };
+}
+
+function performShot(role, ballIdx, vx, vy, isBreakShot = false) {
+  const ball = balls[ballIdx];
+  if (!ball) return;
+  if (isBreakShot) {
+    brk[role] = true;
+    breakShots[role] = { ballIdx, vx, vy };
+    send({ type:'break-aim', role, ballIdx, vx, vy });
+    if (brk.p1 && brk.p2) launchBreak();
+  } else {
+    ball.vx = vx;
+    ball.vy = vy;
+    firing = true;
+    sunkThisTurn = false;
+    send({ type:'shot', ballIdx, vx, vy });
+  }
+  AudioEngine.strike(Math.min(1, Math.hypot(vx, vy) / 16));
+  if (navigator.vibrate && role === myRole) navigator.vibrate(18);
+}
+
+function maybeScheduleAITurn() {
+  if (!isAI || over) return;
+  clearAITimers();
+  const shouldBreak = phase === 'break' && !brk[aiRole] && brk[myRole];
+  const shouldShoot = phase === 'play' && curP === aiRole;
+  if (!shouldBreak && !shouldShoot) return;
+  const token = aiTurnToken;
+  const plan = shouldBreak ? planAIBreak(aiRole) : planAIShot(aiRole);
+  if (!plan) return;
+  const delay = shouldBreak ? 260 : Math.round(rand(1000, 2000));
+  const preview = Math.max(220, Math.min(420, delay - 60));
+  aiTimer = setTimeout(() => {
+    if (token !== aiTurnToken || over || moving() || firing) return;
+    opponentAim = { active:true, ballIdx:plan.ballIdx };
+    updateTurnUI();
+    aiAimTimer = setTimeout(() => {
+      if (token !== aiTurnToken || over || moving() || firing) return;
+      opponentAim = { active:false, ballIdx:-1 };
+      const shot = applyShotVariance(plan, aiRole, shouldBreak ? 'break' : 'play');
+      performShot(aiRole, shot.ballIdx, shot.vx, shot.vy, shouldBreak);
+      updateTurnUI();
+    }, preview);
+  }, Math.max(0, delay - preview));
+}
+
 function stopped() {
   checkWin();
   if (over) return;
@@ -1293,6 +1570,7 @@ function stopped() {
     send(state);
     setTimeout(() => { if (connected) send(getFullState()); }, 220);
   }
+  maybeScheduleAITurn();
 }
 
 function checkWin() {
@@ -1562,19 +1840,30 @@ function drawPockets() {
 
 function drawBumpers() {
   BUMPERS.forEach(bp => {
+    // Shadow
     Xx.beginPath(); Xx.arc(bp.x + 1.5, bp.y + 2.4, BPR + 1.5, 0, Math.PI * 2);
     Xx.fillStyle = 'rgba(0,0,0,.32)'; Xx.fill();
-    const g = Xx.createRadialGradient(bp.x - 4, bp.y - 4, 1, bp.x, bp.y, BPR);
-    g.addColorStop(0, '#fff2a3');
-    g.addColorStop(.26, '#dcbf52');
-    g.addColorStop(.6, '#b28c28');
-    g.addColorStop(1, '#73520f');
+    // Bumper body — colored red or white
+    const g = Xx.createRadialGradient(bp.x - 3, bp.y - 3, 1, bp.x, bp.y, BPR);
+    if (bp.col === 'red') {
+      g.addColorStop(0, '#ff9999');
+      g.addColorStop(.3, '#dd4444');
+      g.addColorStop(.7, '#aa2222');
+      g.addColorStop(1, '#661111');
+    } else {
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(.3, '#e8e8e8');
+      g.addColorStop(.7, '#bbbbbb');
+      g.addColorStop(1, '#777777');
+    }
     Xx.beginPath(); Xx.arc(bp.x, bp.y, BPR, 0, Math.PI * 2);
     Xx.fillStyle = g; Xx.fill();
-    Xx.beginPath(); Xx.arc(bp.x - 3.4, bp.y - 4, BPR * .38, 0, Math.PI * 2);
-    Xx.fillStyle = 'rgba(255,255,240,.52)'; Xx.fill();
+    // Specular highlight
+    Xx.beginPath(); Xx.arc(bp.x - 3.4, bp.y - 4, BPR * .35, 0, Math.PI * 2);
+    Xx.fillStyle = 'rgba(255,255,255,.45)'; Xx.fill();
+    // Edge ring
     Xx.beginPath(); Xx.arc(bp.x, bp.y, BPR, 0, Math.PI * 2);
-    Xx.strokeStyle = 'rgba(67,40,8,.7)';
+    Xx.strokeStyle = bp.col === 'red' ? 'rgba(100,15,15,.6)' : 'rgba(80,80,80,.5)';
     Xx.lineWidth = 1.2; Xx.stroke();
   });
 }
@@ -1820,23 +2109,11 @@ function onUp(e) {
     const vx = (dx / len) * power;
     const vy = (dy / len) * power;
     const idx = balls.indexOf(sel);
-    if (phase === 'break') {
-      brk[myRole] = true;
-      breakShots[myRole] = { ballIdx:idx, vx, vy };
-      send({ type:'break-aim', role:myRole, ballIdx:idx, vx, vy });
-      if (brk.p1 && brk.p2) launchBreak();
-    } else {
-      sel.vx = vx;
-      sel.vy = vy;
-      firing = true;
-      sunkThisTurn = false;
-      send({ type:'shot', ballIdx:idx, vx, vy });
-    }
-    AudioEngine.strike(power / 16);
-    if (navigator.vibrate) navigator.vibrate(18);
+    performShot(myRole, idx, vx, vy, phase === 'break');
   }
   clearAim();
   updateTurnUI();
+  maybeScheduleAITurn();
 }
 
 Cv.addEventListener('mousedown', onDown);
@@ -1873,6 +2150,11 @@ function triggerRematchStart() {
 }
 
 function requestRematch() {
+  if (isAI) {
+    if (!over) return;
+    initGameState();
+    return;
+  }
   if (!over || rematch.mine) return;
   rematch.mine = true;
   rematch.startedAt = Date.now();
@@ -1895,6 +2177,7 @@ $('rb').onclick = requestRematch;
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   AudioEngine.resume();
+  if (isAI) return;
   if (!connected && gameStarted) $('retry-btn').click();
   else if (peer && peer.disconnected && !peer.destroyed) peer.reconnect();
 });

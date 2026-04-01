@@ -2098,18 +2098,43 @@ function drawBumpers() {
 }
 
 function drawPowerArc(ball, power) {
-  const start = -Math.PI * .8;
-  const end = start + Math.PI * 1.6 * power;
-  const grad = Xx.createLinearGradient(ball.x - 18, ball.y, ball.x + 18, ball.y);
+  if (power < .01) return;
+  const r = BR + 14;
+  const start = -Math.PI * .75;
+  const end = start + Math.PI * 1.5 * power;
+  // Outer glow
+  Xx.save();
+  const glowColor = power < .4 ? 'rgba(59,214,110,.3)' : power < .7 ? 'rgba(226,198,77,.35)' : 'rgba(224,87,87,.4)';
+  Xx.shadowColor = glowColor;
+  Xx.shadowBlur = 8 + power * 12;
+  // Arc
+  const grad = Xx.createLinearGradient(ball.x - r, ball.y, ball.x + r, ball.y);
   grad.addColorStop(0, '#3bd66e');
-  grad.addColorStop(.6, '#e2c64d');
+  grad.addColorStop(.5, '#e2c64d');
   grad.addColorStop(1, '#e05757');
   Xx.beginPath();
-  Xx.arc(ball.x, ball.y, BR + 10, start, end);
+  Xx.arc(ball.x, ball.y, r, start, end);
   Xx.strokeStyle = grad;
-  Xx.lineWidth = 4;
+  Xx.lineWidth = 6;
   Xx.lineCap = 'round';
   Xx.stroke();
+  // Background track
+  Xx.shadowBlur = 0;
+  Xx.beginPath();
+  Xx.arc(ball.x, ball.y, r, end, start + Math.PI * 1.5);
+  Xx.strokeStyle = 'rgba(255,255,255,.08)';
+  Xx.lineWidth = 3;
+  Xx.stroke();
+  // Power percentage text
+  if (power > .05) {
+    const pct = Math.round(power * 100);
+    Xx.font = 'bold 11px system-ui, sans-serif';
+    Xx.textAlign = 'center';
+    Xx.textBaseline = 'middle';
+    Xx.fillStyle = power < .4 ? '#3bd66e' : power < .7 ? '#e2c64d' : '#e05757';
+    Xx.fillText(pct + '%', ball.x, ball.y - r - 12);
+  }
+  Xx.restore();
 }
 
 function drawBall(ball) {
@@ -2162,7 +2187,7 @@ function drawBall(ball) {
   if (ball === selected) {
     Xx.save();
     Xx.shadowColor = '#ffe38c';
-    Xx.shadowBlur = 16 + cue.power * 10;
+    Xx.shadowBlur = 14 + cue.power * 22;
     Xx.beginPath(); Xx.arc(ball.x, ball.y, BR + 5, 0, Math.PI * 2);
     Xx.strokeStyle = '#ffe38c';
     Xx.lineWidth = 2.6; Xx.stroke();
@@ -2231,9 +2256,9 @@ function cuePreview(ball, angle) {
 function drawCueActor(ball, angle, power, alpha = 1) {
   const dx = Math.cos(angle);
   const dy = Math.sin(angle);
-  const shake = power > .92 ? Math.sin(performance.now() / 26) * (power - .92) * 6 : 0;
-  const pull = 18 + power * 46 + shake;
-  const cueLen = 122;
+  const shake = power > .75 ? Math.sin(performance.now() / 22) * (power - .75) * 10 : 0;
+  const pull = 14 + power * 65 + shake;
+  const cueLen = 130;
   const nearX = ball.x - dx * (BR + 8 + pull);
   const nearY = ball.y - dy * (BR + 8 + pull);
   const farX = nearX - dx * cueLen;
@@ -2373,8 +2398,9 @@ function updateCueFromPoint(point) {
   const dy = ball.y - point.y;
   const dist = Math.hypot(dx, dy);
   if (dist > 8) cue.angle = Math.atan2(dy, dx); // ball travels away from finger
-  cue.power = clamp((dist - 12) / 90, 0, 1);
-  if (dist < 14) cue.power = 0;
+  // Eased power curve — slow start, ramps up, snappy at the end
+  const raw = clamp((dist - 14) / 110, 0, 1);
+  cue.power = raw < .05 ? 0 : raw * raw * (3 - 2 * raw); // smoothstep
   sendAimState();
 }
 

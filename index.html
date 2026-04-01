@@ -1000,12 +1000,12 @@ const RAIL = 30;
 const IL = RAIL, IR = W - RAIL, IT = RAIL, IB = H - RAIL;
 const CX = W / 2, CY = H / 2;
 const BR = 12, BPR = 16, PR = 22, PSINK = 19;
-const FRICTION = .988;
-const RAIL_RESTITUTION = .72;
-const BUMPER_RESTITUTION = .85;
-const BALL_RESTITUTION = .92;
-const STOP_EPS = .06;
-const MAX_SHOT_POWER = 18;
+const FRICTION = .986;
+const RAIL_RESTITUTION = .68;
+const BUMPER_RESTITUTION = .78;
+const BALL_RESTITUTION = .88;
+const STOP_EPS = .08;
+const MAX_SHOT_POWER = 14;
 const CUE_PREVIEW_LEN = 140;
 const TURN_GLOW = { p1: 'turn-red', p2: 'turn-white', break: 'break-mode' };
 
@@ -1843,12 +1843,20 @@ function phys() {
     b.x += b.vx;
     b.y += b.vy;
     const speed = Math.hypot(b.vx, b.vy);
-    const dynamicFriction = Math.min(.994, FRICTION + Math.min(speed, MAX_SHOT_POWER) * .00028);
+    // Dynamic friction: fast shots coast longer, slow shots brake quickly (felt drag)
+    const speedFactor = Math.min(speed / MAX_SHOT_POWER, 1);
+    const dynamicFriction = FRICTION + (1 - FRICTION) * speedFactor * .35;
     b.vx *= dynamicFriction;
     b.vy *= dynamicFriction;
+    // Gentle final deceleration — balls slow to a natural stop, not instant
+    if (speed < .5 && speed > STOP_EPS) {
+      const brake = .92;
+      b.vx *= brake;
+      b.vy *= brake;
+    }
     if (Math.abs(b.vx) < STOP_EPS) b.vx = 0;
     if (Math.abs(b.vy) < STOP_EPS) b.vy = 0;
-    b.spin += speed * .05;
+    b.spin += speed * .08;
 
     if (b.y - BR < IT && Math.abs(b.x - CX) > PR + 12) {
       AudioEngine.railHit(Math.abs(b.vy));

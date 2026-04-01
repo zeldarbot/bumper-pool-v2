@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bumper Pool</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  background:#0d0d1a;display:flex;flex-direction:column;align-items:center;
+  min-height:100vh;min-height:100dvh;font-family:'Georgia','Times New Roman',serif;
+  color:#f0e6d3;padding:8px;-webkit-user-select:none;user-select:none;
+  overflow:hidden;
+}
+h1{font-size:1.3em;letter-spacing:3px;text-transform:uppercase;color:#c9a84c;
+  margin:8px 0;text-shadow:0 2px 8px rgba(201,168,76,0.3);}
+
+/* LOBBY */
+#lobby{
+  background:linear-gradient(145deg,rgba(20,20,35,0.95),rgba(10,10,20,0.98));
+  border:1px solid rgba(201,168,76,0.25);border-radius:14px;
+  padding:28px;text-align:center;max-width:360px;width:100%;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);
+}
+#lobby h2{color:#c9a84c;font-size:1.1em;margin-bottom:16px;letter-spacing:2px;}
+.lobby-btn{
+  background:linear-gradient(135deg,#c9a84c,#a8872e);color:#1a1a2e;border:none;
+  padding:12px 28px;font-size:0.95em;font-family:'Georgia',serif;text-transform:uppercase;
+  letter-spacing:1.5px;border-radius:6px;cursor:pointer;font-weight:bold;
+  margin:6px;display:inline-block;box-shadow:0 3px 12px rgba(201,168,76,0.3);
+  transition:all 0.2s;
+}
+.lobby-btn:hover{background:linear-gradient(135deg,#e0c070,#c9a84c);transform:translateY(-1px);
+  box-shadow:0 5px 16px rgba(201,168,76,0.4);}
+.lobby-btn:active{transform:translateY(0);}
+#room-code{font-size:2em;color:#c9a84c;letter-spacing:8px;font-weight:bold;
+  margin:12px 0;font-family:monospace;text-shadow:0 0 10px rgba(201,168,76,0.4);}
+#join-input{
+  background:#151520;border:2px solid rgba(201,168,76,0.5);color:#f0e6d3;
+  padding:10px 14px;font-size:1.3em;font-family:monospace;text-align:center;
+  width:170px;border-radius:6px;letter-spacing:6px;text-transform:uppercase;
+  outline:none;transition:border-color 0.2s;
+}
+#join-input:focus{border-color:#c9a84c;}
+#status-msg{color:#888;font-size:0.8em;margin-top:10px;min-height:20px;transition:opacity 0.3s;}
+.conn-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle;}
+.conn-green{background:#4a4;box-shadow:0 0 4px #4a4;}
+.conn-yellow{background:#cc4;box-shadow:0 0 4px #cc4;}
+.conn-red{background:#a44;box-shadow:0 0 4px #a44;}
+
+/* GAME */
+#game{display:none;flex-direction:column;align-items:center;}
+#you-are{font-size:0.75em;color:rgba(201,168,76,0.5);margin-bottom:4px;letter-spacing:1px;}
+#scoreboard{
+  display:flex;gap:12px;margin-bottom:6px;
+  background:linear-gradient(135deg,rgba(15,15,25,0.9),rgba(5,5,15,0.95));
+  padding:8px 20px;border-radius:10px;border:1px solid rgba(201,168,76,0.15);
+  align-items:center;box-shadow:0 4px 16px rgba(0,0,0,0.3);
+}
+.pi{text-align:center;min-width:90px;}
+.pn{font-size:0.85em;font-weight:bold;text-transform:uppercase;letter-spacing:1.5px;}
+.pn.red{color:#e05555;text-shadow:0 0 6px rgba(224,85,85,0.3);}
+.pn.wht{color:#ddd;text-shadow:0 0 6px rgba(255,255,255,0.2);}
+.bd{margin-top:3px;display:flex;justify-content:center;gap:3px;}
+.ball-icon{width:12px;height:12px;border-radius:50%;display:inline-block;}
+.ball-icon.red-ball{background:radial-gradient(circle at 35% 35%,#ff6666,#cc2222,#881111);}
+.ball-icon.white-ball{background:radial-gradient(circle at 35% 35%,#ffffff,#cccccc,#999999);}
+.ball-icon.sunk{opacity:0.15;}
+#tb{text-align:center;min-width:100px;}
+#ti{font-size:0.82em;color:#c9a84c;}
+#pm{font-size:0.65em;color:#777;margin-top:2px;min-height:14px;}
+#conn-status{font-size:0.55em;color:#555;margin-top:2px;}
+canvas{border-radius:8px;cursor:crosshair;touch-action:none;max-width:100%;
+  box-shadow:0 8px 40px rgba(0,0,0,0.6);}
+#ins{font-size:0.65em;color:#444;margin-top:6px;text-align:center;}
+
+/* DISCONNECTED OVERLAY */
+#dc-overlay{
+  display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;
+  justify-content:center;z-index:8;
+}
+#dc-overlay.show{display:flex;}
+#dc-text{font-size:1.2em;color:#c9a84c;margin-bottom:8px;}
+#dc-sub{font-size:0.8em;color:#888;margin-bottom:16px;}
+#dc-spinner{width:30px;height:30px;border:3px solid #333;border-top-color:#c9a84c;
+  border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:16px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* WIN OVERLAY */
+#ov{
+  display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;
+  justify-content:center;z-index:10;
+}
+#ov.show{display:flex;}
+#wt{font-size:2.2em;color:#c9a84c;text-shadow:0 0 30px rgba(201,168,76,0.6);
+  margin-bottom:20px;text-align:center;letter-spacing:2px;}
+#rb{
+  background:linear-gradient(135deg,#c9a84c,#a8872e);color:#1a1a2e;border:none;
+  padding:12px 32px;font-size:1em;font-family:'Georgia',serif;text-transform:uppercase;
+  letter-spacing:2px;border-radius:6px;cursor:pointer;font-weight:bold;
+  box-shadow:0 4px 16px rgba(201,168,76,0.3);transition:all 0.2s;
+}
+#rb:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(201,168,76,0.5);}
+#confetti-canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:11;}
+</style>
+</head>
+<body>
+<h1>🎱 Bumper Pool 🎱</h1>
+
+<div id="lobby">
+  <h2>MULTIPLAYER</h2>
+  <div id="lobby-menu">
+    <button class="lobby-btn" onclick="createGame()">Create Game</button><br>
+    <input id="join-input" placeholder="CODE" maxlength="4"><br>
+    <button class="lobby-btn" onclick="joinGame()">Join Game</button>
+  </div>
+  <div id="lobby-waiting" style="display:none">
+    <div style="font-size:0.9em;color:#999;">Share this code:</div>
+    <div id="room-code">----</div>
+    <button class="lobby-btn" id="copy-btn" onclick="copyLink()" style="font-size:0.8em;padding:8px 18px;">📋 Copy Link</button>
+    <button class="lobby-btn" id="share-btn" onclick="shareLink()" style="font-size:0.8em;padding:8px 18px;">📤 Share</button>
+    <div id="status-msg">Waiting for opponent...</div>
+  </div>
+</div>
+
+<div id="game">
+  <div id="you-are"></div>
+  <div id="scoreboard">
+    <div class="pi"><div class="pn red">Player 1 🔴</div><div class="bd" id="jd"></div></div>
+    <div id="tb"><div id="ti">—</div><div id="pm"></div><div id="conn-status"></div></div>
+    <div class="pi"><div class="pn wht">Player 2 ⚪</div><div class="bd" id="md"></div></div>
+  </div>
+  <canvas id="c"></canvas>
+  <div id="ins">Tap your ball · Drag to aim · Release to shoot</div>
+</div>
+
+<div id="dc-overlay">
+  <div id="dc-spinner"></div>
+  <div id="dc-text">Connection Lost</div>
+  <div id="dc-sub">Reconnecting...</div>
+  <button class="lobby-btn" onclick="forceReconnect()" style="font-size:0.8em;padding:8px 18px;">Retry Now</button>
+</div>
+
+<div id="ov"><canvas id="confetti-canvas"></canvas><div id="wt"></div><button id="rb" onclick="requestRematch()">Play Again</button></div>
+
+<script>
+// ==================== AUDIO ENGINE ====================
+const AudioEngine = {
+  ctx: null,
+  init() {
+    if (this.ctx) return;
+    try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  },
+  resume() {
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+  },
+  ballHit(force) {
+    if (!this.ctx) return;
+    const vol = Math.min(1, force / 12) * 0.4;
+    if (vol < 0.02) return;
+    try {
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'highpass'; f.frequency.value = 2000;
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(3500 + force * 200, this.ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.04);
+      g.gain.setValueAtTime(vol, this.ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+      o.connect(f); f.connect(g); g.connect(this.ctx.destination);
+      o.start(); o.stop(this.ctx.currentTime + 0.1);
+    } catch(e) {}
+  },
+  railHit(force) {
+    if (!this.ctx) return;
+    const vol = Math.min(1, force / 10) * 0.25;
+    if (vol < 0.02) return;
+    try {
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(200 + force * 30, this.ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.06);
+      g.gain.setValueAtTime(vol, this.ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
+      o.connect(g); g.connect(this.ctx.destination);
+      o.start(); o.stop(this.ctx.currentTime + 0.12);
+    } catch(e) {}
+  },
+  bumperHit(force) {
+    if (!this.ctx) return;
+    const vol = Math.min(1, force / 8) * 0.3;
+    if (vol < 0.02) return;
+    try {
+      const o = this.ctx.createOscillator();
+      const o2 = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o.type = 'sine'; o2.type = 'sine';
+      o.frequency.value = 4200; o2.frequency.value = 6300;
+      g.gain.setValueAtTime(vol, this.ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+      o.connect(g); o2.connect(g); g.connect(this.ctx.destination);
+      o.start(); o2.start();
+      o.stop(this.ctx.currentTime + 0.18); o2.stop(this.ctx.currentTime + 0.18);
+    } catch(e) {}
+  },
+  pocket() {
+    if (!this.ctx) return;
+    try {
+      const t = this.ctx.currentTime;
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(600, t);
+      o.frequency.exponentialRampToValueAtTime(120, t + 0.25);
+      g.gain.setValueAtTime(0.35, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      o.connect(g); g.connect(this.ctx.destination);
+      o.start(); o.stop(t + 0.35);
+      const o2 = this.ctx.createOscillator();
+      const g2 = this.ctx.createGain();
+      o2.type = 'square'; o2.frequency.value = 100;
+      g2.gain.setValueAtTime(0.15, t);
+      g2.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+      o2.connect(g2); g2.connect(this.ctx.destination);
+      o2.start(); o2.stop(t + 0.08);
+    } catch(e) {}
+  },
+  strike(power) {
+    if (!this.ctx) return;
+    try {
+      const t = this.ctx.currentTime;
+      const vol = 0.15 + power * 0.25;
+      const n = this.ctx.createBufferSource();
+      const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.06, this.ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (d.length * 0.15));
+      n.buffer = buf;
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'bandpass'; f.frequency.value = 2500; f.Q.value = 2;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+      n.connect(f); f.connect(g); g.connect(this.ctx.destination);
+      n.start();
+    } catch(e) {}
+  },
+  win() {
+    if (!this.ctx) return;
+    try {
+      const t = this.ctx.currentTime;
+      [523, 659, 784, 1047].forEach((freq, i) => {
+        const o = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        o.type = 'triangle'; o.frequency.value = freq;
+        g.gain.setValueAtTime(0, t + i * 0.12);
+        g.gain.linearRampToValueAtTime(0.2, t + i * 0.12 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.4);
+        o.connect(g); g.connect(this.ctx.destination);
+        o.start(t + i * 0.12); o.stop(t + i * 0.12 + 0.5);
+      });
+    } catch(e) {}
+  }
+};
+
+// ==================== CONFETTI ====================
+const Confetti = {
+  canvas: null, ctx: null, particles: [], running: false,
+  init() {
+    this.canvas = document.getElementById('confetti-canvas');
+    this.ctx = this.canvas.getContext('2d');
+  },
+  launch(color) {
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+    this.particles = [];
+    const colors = color === 'red'
+      ? ['#ff4444','#ff6666','#cc2222','#ffaa44','#ffdd44']
+      : ['#ffffff','#dddddd','#aaaaff','#ffdd44','#44ddff'];
+    for (let i = 0; i < 120; i++) {
+      this.particles.push({
+        x: this.canvas.width * 0.5 + (Math.random() - 0.5) * 200,
+        y: this.canvas.height * 0.4,
+        vx: (Math.random() - 0.5) * 14,
+        vy: -Math.random() * 16 - 4,
+        w: 4 + Math.random() * 6, h: 6 + Math.random() * 10,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rot: Math.random() * Math.PI * 2,
+        rv: (Math.random() - 0.5) * 0.3, life: 1,
+      });
+    }
+    this.running = true; this.tick();
+  },
+  tick() {
+    if (!this.running) return;
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    let alive = false;
+    for (const p of this.particles) {
+      if (p.life <= 0) continue;
+      alive = true;
+      p.x += p.vx; p.y += p.vy; p.vy += 0.35; p.vx *= 0.99;
+      p.rot += p.rv; p.life -= 0.006;
+      this.ctx.save();
+      this.ctx.translate(p.x, p.y); this.ctx.rotate(p.rot);
+      this.ctx.globalAlpha = Math.max(0, p.life);
+      this.ctx.fillStyle = p.color;
+      this.ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      this.ctx.restore();
+    }
+    if (alive) requestAnimationFrame(() => this.tick());
+    else { this.running = false; this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); }
+  },
+  stop() { this.running = false; if (this.ctx) this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); }
+};
+
+// ==================== NETWORKING (HARDENED) ====================
+let peer, conn, isHost = false, myRole = null;
+let connected = false;
+let currentCode = '';
+let reconnectAttempts = 0;
+const MAX_RECONNECT = 10;
+let reconnectTimer = null;
+let heartbeatTimer = null;
+let lastPong = 0;
+let latency = 0;
+let connQuality = 'green'; // green/yellow/red
+let gameStarted = false;
+let stateSeq = 0; // state sequence number for sync
+let lastSyncedSeq = 0;
+
+// Reliable message queue — buffer messages during brief disconnects
+let msgQueue = [];
+let queueDrainTimer = null;
+
+function genCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let c = '';
+  for (let i = 0; i < 4; i++) c += chars[Math.floor(Math.random() * chars.length)];
+  return c;
+}
+
+function setStatus(html) {
+  document.getElementById('status-msg').innerHTML = html;
+}
+
+function createGame() {
+  AudioEngine.init();
+  const code = genCode();
+  currentCode = code;
+  isHost = true; myRole = 'p1';
+  document.getElementById('lobby-menu').style.display = 'none';
+  document.getElementById('lobby-waiting').style.display = 'block';
+  document.getElementById('room-code').textContent = code;
+  setStatus('Creating room...');
+  history.replaceState(null, '', '?host=' + code);
+  initPeerAsHost();
+}
+
+function initPeerAsHost() {
+  if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
+  peer = new Peer('bpool2-' + currentCode, {
+    debug: 0,
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
+        // Free TURN servers for NAT traversal
+        {
+          urls: 'turn:openrelay.metered.ca:80',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:443',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        }
+      ]
+    }
+  });
+  peer.on('open', () => {
+    setStatus('<span class="conn-dot conn-green"></span>Room ready — share the code!');
+    reconnectAttempts = 0;
+  });
+  peer.on('connection', (c) => { conn = c; setupConn(); });
+  peer.on('disconnected', () => {
+    if (!peer.destroyed) {
+      setStatus('<span class="conn-dot conn-yellow"></span>Reconnecting to server...');
+      setTimeout(() => { if (peer && !peer.destroyed) peer.reconnect(); }, 1000);
+    }
+  });
+  peer.on('error', (e) => {
+    console.warn('Peer error:', e.type, e);
+    if (e.type === 'unavailable-id') {
+      setStatus('Code taken — try again.');
+      setTimeout(() => {
+        document.getElementById('lobby-menu').style.display = 'block';
+        document.getElementById('lobby-waiting').style.display = 'none';
+      }, 1500);
+    } else if (e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error') {
+      scheduleReconnect();
+    } else {
+      setStatus('Error: ' + e.type + '. Retrying...');
+      scheduleReconnect();
+    }
+  });
+}
+
+function initPeerAsGuest() {
+  if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
+  peer = new Peer(null, {
+    debug: 0,
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
+        {
+          urls: 'turn:openrelay.metered.ca:80',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:443',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        }
+      ]
+    }
+  });
+  peer.on('open', () => {
+    conn = peer.connect('bpool2-' + currentCode, { reliable: true, serialization: 'json' });
+    setupConn();
+  });
+  peer.on('disconnected', () => {
+    if (!peer.destroyed) {
+      setTimeout(() => { if (peer && !peer.destroyed) peer.reconnect(); }, 1000);
+    }
+  });
+  peer.on('error', (e) => {
+    console.warn('Peer error:', e.type, e);
+    if (e.type === 'peer-unavailable') {
+      setStatus('Room not found. Check the code.');
+      setTimeout(() => {
+        document.getElementById('lobby-menu').style.display = 'block';
+        document.getElementById('lobby-waiting').style.display = 'none';
+      }, 2000);
+    } else {
+      scheduleReconnect();
+    }
+  });
+}
+
+function joinGame() {
+  AudioEngine.init();
+  const code = document.getElementById('join-input').value.toUpperCase().trim();
+  if (code.length !== 4) return;
+  currentCode = code;
+  isHost = false; myRole = 'p2';
+  document.getElementById('lobby-menu').style.display = 'none';
+  document.getElementById('lobby-waiting').style.display = 'block';
+  document.getElementById('room-code').textContent = code;
+  setStatus('Connecting...');
+  initPeerAsGuest();
+}
+
+function setupConn() {
+  conn.on('open', () => {
+    connected = true;
+    reconnectAttempts = 0;
+    lastPong = Date.now();
+    setStatus('<span class="conn-dot conn-green"></span>Connected!');
+    hideDisconnectOverlay();
+    // Drain any queued messages
+    drainQueue();
+    // Start heartbeat
+    startHeartbeat();
+    // If reconnecting mid-game, request state sync
+    if (gameStarted && !isHost) {
+      send({ type: 'sync-request' });
+    }
+    if (!gameStarted) {
+      setTimeout(startGame, 500);
+    }
+  });
+  conn.on('data', handleMessage);
+  conn.on('close', () => {
+    connected = false;
+    stopHeartbeat();
+    if (gameStarted) {
+      showDisconnectOverlay();
+      scheduleReconnect();
+    } else {
+      setStatus('<span class="conn-dot conn-red"></span>Opponent disconnected');
+    }
+  });
+  conn.on('error', (e) => {
+    console.warn('Conn error:', e);
+  });
+}
+
+function send(msg) {
+  if (conn && conn.open && connected) {
+    try { conn.send(msg); return true; } catch(e) { console.warn('Send failed:', e); }
+  }
+  // Queue important messages
+  if (msg.type === 'shot' || msg.type === 'break-aim' || msg.type === 'rematch' || msg.type === 'state-sync') {
+    msgQueue.push({ msg, time: Date.now() });
+    // Expire old messages after 10s
+    msgQueue = msgQueue.filter(m => Date.now() - m.time < 10000);
+  }
+  return false;
+}
+
+function drainQueue() {
+  if (msgQueue.length === 0) return;
+  const toSend = [...msgQueue];
+  msgQueue = [];
+  for (const { msg } of toSend) {
+    if (conn && conn.open) {
+      try { conn.send(msg); } catch(e) {}
+    }
+  }
+}
+
+// Heartbeat: ping every 2s, detect dead connections within 6s
+function startHeartbeat() {
+  stopHeartbeat();
+  lastPong = Date.now();
+  heartbeatTimer = setInterval(() => {
+    if (conn && conn.open) {
+      try { conn.send({ type: 'ping', t: Date.now() }); } catch(e) {}
+    }
+    // Check for timeout
+    const elapsed = Date.now() - lastPong;
+    if (elapsed > 6000 && connected) {
+      connQuality = 'red';
+      updateConnStatus();
+      if (elapsed > 12000) {
+        // Connection is truly dead
+        connected = false;
+        if (gameStarted) {
+          showDisconnectOverlay();
+          scheduleReconnect();
+        }
+      }
+    } else if (elapsed > 3000) {
+      connQuality = 'yellow';
+      updateConnStatus();
+    } else {
+      connQuality = 'green';
+      updateConnStatus();
+    }
+  }, 2000);
+}
+
+function stopHeartbeat() {
+  if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+}
+
+function updateConnStatus() {
+  const el = document.getElementById('conn-status');
+  if (!el) return;
+  if (!gameStarted) { el.textContent = ''; return; }
+  const dot = `<span class="conn-dot conn-${connQuality}"></span>`;
+  if (connQuality === 'green') {
+    el.innerHTML = latency > 0 ? `${dot}${latency}ms` : `${dot}Connected`;
+  } else if (connQuality === 'yellow') {
+    el.innerHTML = `${dot}Weak`;
+  } else {
+    el.innerHTML = `${dot}Lost`;
+  }
+}
+
+// Reconnection with exponential backoff
+function scheduleReconnect() {
+  if (reconnectTimer) return;
+  if (reconnectAttempts >= MAX_RECONNECT) {
+    if (gameStarted) {
+      document.getElementById('dc-sub').textContent = 'Could not reconnect. Refresh to try again.';
+    } else {
+      setStatus('Could not connect. Refresh to try again.');
+    }
+    return;
+  }
+  reconnectAttempts++;
+  const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts - 1), 8000);
+  const sub = document.getElementById('dc-sub');
+  if (sub && gameStarted) sub.textContent = `Attempt ${reconnectAttempts}/${MAX_RECONNECT}...`;
+
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    attemptReconnect();
+  }, delay);
+}
+
+function attemptReconnect() {
+  if (connected) return;
+  console.log('Reconnect attempt', reconnectAttempts);
+
+  // Try reconnecting existing peer first
+  if (peer && !peer.destroyed && peer.disconnected) {
+    peer.reconnect();
+    return;
+  }
+
+  // Otherwise recreate
+  if (isHost) {
+    initPeerAsHost();
+  } else {
+    initPeerAsGuest();
+  }
+}
+
+function forceReconnect() {
+  reconnectAttempts = 0;
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  attemptReconnect();
+}
+
+function showDisconnectOverlay() {
+  document.getElementById('dc-overlay').classList.add('show');
+  document.getElementById('dc-sub').textContent = 'Reconnecting...';
+}
+
+function hideDisconnectOverlay() {
+  document.getElementById('dc-overlay').classList.remove('show');
+}
+
+// Host sends full state periodically and on request
+function getFullState() {
+  return {
+    type: 'state-sync',
+    seq: ++stateSeq,
+    balls: balls.map(b => ({ x: b.x, y: b.y, vx: b.vx, vy: b.vy, out: b.out })),
+    curP, phase, over, sunk,
+    brk: { p1: brk.p1, p2: brk.p2 },
+  };
+}
+
+function applyState(data) {
+  if (data.seq <= lastSyncedSeq) return; // stale
+  lastSyncedSeq = data.seq;
+  for (let i = 0; i < balls.length && i < data.balls.length; i++) {
+    const src = data.balls[i];
+    const b = balls[i];
+    // Smooth interpolation for small differences, snap for large
+    const dx = src.x - b.x, dy = src.y - b.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 30 || src.out !== b.out) {
+      // Snap
+      b.x = src.x; b.y = src.y;
+    } else if (dist > 1) {
+      // Lerp
+      b.x += dx * 0.3; b.y += dy * 0.3;
+    }
+    b.vx = src.vx; b.vy = src.vy; b.out = src.out;
+  }
+  curP = data.curP; phase = data.phase; over = data.over;
+  if (data.brk) { brk.p1 = data.brk.p1; brk.p2 = data.brk.p2; }
+  hud();
+}
+
+// Host periodic sync (every 3s during active physics, 10s when idle)
+let syncTimer = null;
+function startSyncLoop() {
+  if (!isHost) return;
+  if (syncTimer) clearInterval(syncTimer);
+  syncTimer = setInterval(() => {
+    if (connected && gameStarted && balls) {
+      send(getFullState());
+    }
+  }, moving() ? 3000 : 10000);
+}
+
+function getJoinUrl() {
+  return window.location.origin + window.location.pathname + '?join=' + currentCode;
+}
+function copyLink() {
+  navigator.clipboard.writeText(getJoinUrl()).then(() => {
+    document.getElementById('copy-btn').textContent = '✅ Copied!';
+    setTimeout(() => { document.getElementById('copy-btn').textContent = '📋 Copy Link'; }, 2000);
+  });
+}
+function shareLink() {
+  if (navigator.share) {
+    navigator.share({ title: 'Bumper Pool', text: 'Join my Bumper Pool game!', url: getJoinUrl() });
+  } else copyLink();
+}
+
+// ==================== GAME CONSTANTS ====================
+const Cv = document.getElementById('c');
+const Xx = Cv.getContext('2d');
+
+const W = 420, H = 700, RAIL = 32;
+const IL = RAIL, IR = W - RAIL, IT = RAIL, IB = H - RAIL;
+const CX = W / 2, CY = H / 2;
+const BR = 11, BPR = 13, PR = 16, PSINK = 18;
+const FRICTION = 0.984;
+
+let sc = 1;
+let feltPattern = null;
+
+function generateFelt() {
+  const fc = document.createElement('canvas');
+  fc.width = 200; fc.height = 200;
+  const fx = fc.getContext('2d');
+  fx.fillStyle = '#1e6b3f';
+  fx.fillRect(0, 0, 200, 200);
+  const id = fx.getImageData(0, 0, 200, 200);
+  for (let i = 0; i < id.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * 18;
+    id.data[i] += n; id.data[i + 1] += n; id.data[i + 2] += n;
+  }
+  fx.putImageData(id, 0, 0);
+  feltPattern = Xx.createPattern(fc, 'repeat');
+}
+
+function resize() {
+  const mw = Math.min(window.innerWidth - 16, W);
+  const mh = window.innerHeight - 160;
+  sc = Math.min(mw / W, mh / H, 1.2);
+  Cv.width = W * sc; Cv.height = H * sc;
+  Cv.style.width = (W * sc) + 'px';
+  Cv.style.height = (H * sc) + 'px';
+  Xx.setTransform(sc, 0, 0, sc, 0, 0);
+  generateFelt();
+}
+resize();
+window.addEventListener('resize', () => { resize(); draw(); });
+
+const POCKETS = [
+  { x: CX, y: IT, forPlayer: 'p1' },
+  { x: CX, y: IB, forPlayer: 'p2' },
+];
+
+const BUMPERS = [
+  { x: CX - 36, y: IT + 4 }, { x: CX + 36, y: IT + 4 },
+  { x: CX - 36, y: IB - 4 }, { x: CX + 36, y: IB - 4 },
+  { x: CX - 22, y: CY - 72 }, { x: CX + 22, y: CY - 72 },
+  { x: CX - 44, y: CY - 36 }, { x: CX, y: CY - 36 }, { x: CX + 44, y: CY - 36 },
+  { x: CX - 44, y: CY + 36 }, { x: CX, y: CY + 36 }, { x: CX + 44, y: CY + 36 },
+  { x: CX - 22, y: CY + 72 }, { x: CX + 22, y: CY + 72 },
+];
+
+// ==================== GAME STATE ====================
+let balls, curP, over, phase, brk, breakShooting, sel, aim, firing, sunk, af;
+let breakShots = { p1: null, p2: null };
+let trails = [];
+
+function mk(x, y, col, pl, m) {
+  return { x, y, vx: 0, vy: 0, col, pl, m, out: false, lastX: x, lastY: y };
+}
+
+function startGame() {
+  document.getElementById('lobby').style.display = 'none';
+  const g = document.getElementById('game');
+  g.style.display = 'flex'; g.style.flexDirection = 'column'; g.style.alignItems = 'center';
+  document.getElementById('you-are').textContent =
+    myRole === 'p1' ? 'You are: PLAYER 1 🔴' : 'You are: PLAYER 2 ⚪';
+  gameStarted = true;
+  Confetti.init();
+  initGameState();
+  startSyncLoop();
+}
+
+function initGameState() {
+  document.getElementById('ov').classList.remove('show');
+  Confetti.stop();
+  over = false; phase = 'break'; brk = { p1: false, p2: false };
+  breakShooting = false; curP = 'p1'; sel = null; aim = null; firing = false; sunk = false;
+  breakShots = { p1: null, p2: null }; trails = [];
+  stateSeq = 0; lastSyncedSeq = 0;
+
+  const bpY = IB, tpY = IT;
+  balls = [
+    mk(CX, bpY - 32, '#cc2222', 'p1', true),
+    mk(CX - 50, bpY - 42, '#bb1111', 'p1', false),
+    mk(CX - 92, bpY - 54, '#bb1111', 'p1', false),
+    mk(CX + 50, bpY - 42, '#bb1111', 'p1', false),
+    mk(CX + 92, bpY - 54, '#bb1111', 'p1', false),
+    mk(CX, tpY + 32, '#dddddd', 'p2', true),
+    mk(CX - 50, tpY + 42, '#cccccc', 'p2', false),
+    mk(CX - 92, tpY + 54, '#cccccc', 'p2', false),
+    mk(CX + 50, tpY + 42, '#cccccc', 'p2', false),
+    mk(CX + 92, tpY + 54, '#cccccc', 'p2', false),
+  ];
+  hud();
+  if (af) cancelAnimationFrame(af);
+  loop();
+}
+
+function requestRematch() {
+  send({ type: 'rematch' });
+  initGameState();
+}
+
+// ==================== HUD ====================
+function hud() {
+  const jBalls = balls.filter(b => b.pl === 'p1');
+  const mBalls = balls.filter(b => b.pl === 'p2');
+  document.getElementById('jd').innerHTML = jBalls.map(b =>
+    `<span class="ball-icon red-ball${b.out ? ' sunk' : ''}"></span>`
+  ).join('');
+  document.getElementById('md').innerHTML = mBalls.map(b =>
+    `<span class="ball-icon white-ball${b.out ? ' sunk' : ''}"></span>`
+  ).join('');
+
+  if (over) return;
+  const ti = document.getElementById('ti');
+  const pm = document.getElementById('pm');
+  if (phase === 'break') {
+    if (breakShooting) { ti.textContent = 'BREAK!'; pm.textContent = ''; }
+    else {
+      const myAimed = brk[myRole];
+      const oppRole = myRole === 'p1' ? 'p2' : 'p1';
+      const oppAimed = brk[oppRole];
+      if (!myAimed) { ti.textContent = 'BREAK'; pm.textContent = 'Aim your marked ball!'; }
+      else if (!oppAimed) { ti.textContent = 'BREAK'; pm.textContent = 'Waiting for opponent...'; }
+      else { ti.textContent = 'BREAK!'; pm.textContent = ''; }
+    }
+  } else {
+    ti.textContent = curP === 'p1' ? "Player 1's Turn 🔴" : "Player 2's Turn ⚪";
+    if (curP === myRole) {
+      const mb = balls.find(b => b.pl === curP && b.m);
+      pm.textContent = (mb && !mb.out) ? 'Must pocket marked ball first' : 'Your shot!';
+    } else {
+      pm.textContent = 'Waiting...';
+    }
+  }
+}
+
+function canIShoot() {
+  if (over || moving() || firing) return false;
+  if (phase === 'break') return !brk[myRole];
+  return curP === myRole;
+}
+
+function moving() {
+  return balls.some(b => !b.out && (Math.abs(b.vx) > 0.04 || Math.abs(b.vy) > 0.04));
+}
+
+// ==================== MULTIPLAYER MESSAGES ====================
+function handleMessage(data) {
+  if (!data || !data.type) return;
+
+  switch (data.type) {
+    case 'ping':
+      if (conn && conn.open) {
+        try { conn.send({ type: 'pong', t: data.t }); } catch(e) {}
+      }
+      break;
+
+    case 'pong':
+      lastPong = Date.now();
+      latency = Math.round((Date.now() - data.t) / 2);
+      connQuality = latency < 100 ? 'green' : latency < 250 ? 'yellow' : 'red';
+      updateConnStatus();
+      break;
+
+    case 'shot': {
+      const b = balls[data.ballIdx];
+      if (b) { b.vx = data.vx; b.vy = data.vy; firing = true; sunk = false; }
+      AudioEngine.strike(Math.hypot(data.vx, data.vy) / 16);
+      break;
+    }
+
+    case 'break-aim': {
+      const opp = myRole === 'p1' ? 'p2' : 'p1';
+      brk[opp] = true;
+      breakShots[opp] = { ballIdx: data.ballIdx, vx: data.vx, vy: data.vy };
+      hud();
+      if (brk.p1 && brk.p2) launchBreak();
+      break;
+    }
+
+    case 'rematch':
+      initGameState();
+      break;
+
+    case 'sync-request':
+      // Only host responds
+      if (isHost && balls) {
+        send(getFullState());
+      }
+      break;
+
+    case 'state-sync':
+      // Only guest applies
+      if (!isHost) {
+        applyState(data);
+      }
+      break;
+  }
+}
+
+function launchBreak() {
+  if (breakShots.p1) {
+    const b = balls[breakShots.p1.ballIdx];
+    if (b) { b.vx = breakShots.p1.vx; b.vy = breakShots.p1.vy; }
+  }
+  if (breakShots.p2) {
+    const b = balls[breakShots.p2.ballIdx];
+    if (b) { b.vx = breakShots.p2.vx; b.vy = breakShots.p2.vy; }
+  }
+  breakShooting = true; firing = true; sunk = false;
+  AudioEngine.strike(0.8);
+  hud();
+}
+
+function stopped() {
+  chkWin(); if (over) return;
+  if (phase === 'break') {
+    breakShooting = false; phase = 'play';
+    const jm = balls.find(b => b.pl === 'p1' && b.m);
+    const mm = balls.find(b => b.pl === 'p2' && b.m);
+    const jT = POCKETS.find(p => p.forPlayer === 'p1');
+    const mT = POCKETS.find(p => p.forPlayer === 'p2');
+    const jD = jm.out ? 0 : Math.hypot(jm.x - jT.x, jm.y - jT.y);
+    const mD = mm.out ? 0 : Math.hypot(mm.x - mT.x, mm.y - mT.y);
+    curP = jD <= mD ? 'p1' : 'p2';
+  } else {
+    if (!sunk) curP = curP === 'p1' ? 'p2' : 'p1';
+  }
+  sunk = false; sel = null; aim = null; hud();
+  // Host sends authoritative state after each turn
+  if (isHost) { send(getFullState()); }
+}
+
+function chkWin() {
+  const p1done = balls.filter(b => b.pl === 'p1' && !b.out).length === 0;
+  const p2done = balls.filter(b => b.pl === 'p2' && !b.out).length === 0;
+  if (p1done || p2done) {
+    over = true;
+    const winner = p1done ? 'p1' : 'p2';
+    document.getElementById('wt').textContent = winner === 'p1' ? 'PLAYER 1 WINS! 🔴' : 'PLAYER 2 WINS! ⚪';
+    document.getElementById('ov').classList.add('show');
+    AudioEngine.win();
+    Confetti.launch(winner === 'p1' ? 'red' : 'white');
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
+    hud();
+  }
+}
+
+// ==================== PHYSICS ====================
+function phys() {
+  if (!moving()) return;
+  for (let b of balls) {
+    if (b.out) continue;
+    b.lastX = b.x; b.lastY = b.y;
+    b.x += b.vx; b.y += b.vy;
+    b.vx *= FRICTION; b.vy *= FRICTION;
+    if (Math.abs(b.vx) < 0.04) b.vx = 0;
+    if (Math.abs(b.vy) < 0.04) b.vy = 0;
+
+    const spd = Math.hypot(b.vx, b.vy);
+    if (spd > 2) {
+      trails.push({ x: b.x, y: b.y, col: b.pl === 'p1' ? 'rgba(200,60,60,' : 'rgba(200,200,200,', life: 1 });
+    }
+
+    // Rail collisions
+    if (b.y - BR < IT && Math.abs(b.x - CX) > PR + 6) {
+      AudioEngine.railHit(Math.abs(b.vy));
+      b.y = IT + BR; b.vy = Math.abs(b.vy) * 0.8;
+    }
+    if (b.y + BR > IB && Math.abs(b.x - CX) > PR + 6) {
+      AudioEngine.railHit(Math.abs(b.vy));
+      b.y = IB - BR; b.vy = -Math.abs(b.vy) * 0.8;
+    }
+    if (b.x - BR < IL) {
+      AudioEngine.railHit(Math.abs(b.vx));
+      b.x = IL + BR; b.vx = Math.abs(b.vx) * 0.8;
+    }
+    if (b.x + BR > IR) {
+      AudioEngine.railHit(Math.abs(b.vx));
+      b.x = IR - BR; b.vx = -Math.abs(b.vx) * 0.8;
+    }
+
+    // Bumpers
+    for (let bp of BUMPERS) {
+      const dx = b.x - bp.x, dy = b.y - bp.y, d = Math.hypot(dx, dy), mn = BR + BPR;
+      if (d < mn && d > 0.01) {
+        const nx = dx / d, ny = dy / d, dot = b.vx * nx + b.vy * ny;
+        if (dot < 0) {
+          AudioEngine.bumperHit(Math.abs(dot));
+          b.vx -= 2.05 * dot * nx; b.vy -= 2.05 * dot * ny;
+        }
+        b.x = bp.x + nx * (mn + 0.5); b.y = bp.y + ny * (mn + 0.5);
+      }
+    }
+
+    // Pockets
+    for (let p of POCKETS) {
+      if (Math.hypot(b.x - p.x, b.y - p.y) < PSINK) {
+        if (p.forPlayer === b.pl) {
+          const mb = balls.find(mm => mm.pl === b.pl && mm.m);
+          if (mb && !mb.out && b !== mb) { bounce(b, p); }
+          else { b.out = true; b.vx = 0; b.vy = 0; sunk = true; AudioEngine.pocket(); }
+        } else { bounce(b, p); }
+      }
+    }
+  }
+
+  // Ball-ball
+  for (let i = 0; i < balls.length; i++) {
+    for (let j = i + 1; j < balls.length; j++) {
+      const a = balls[i], b = balls[j];
+      if (a.out || b.out) continue;
+      const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+      if (d < BR * 2 && d > 0.01) {
+        const nx = dx / d, ny = dy / d;
+        const imp = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
+        if (imp > 0) {
+          a.vx -= imp * nx; a.vy -= imp * ny;
+          b.vx += imp * nx; b.vy += imp * ny;
+          AudioEngine.ballHit(imp);
+        }
+        const ov = BR * 2 - d;
+        a.x -= nx * ov / 2; a.y -= ny * ov / 2;
+        b.x += nx * ov / 2; b.y += ny * ov / 2;
+      }
+    }
+  }
+
+  for (let b of balls) {
+    if (b.out) continue;
+    b.x = Math.max(IL + BR, Math.min(IR - BR, b.x));
+    b.y = Math.max(IT + BR, Math.min(IB - BR, b.y));
+  }
+}
+
+function bounce(b, p) {
+  const dx = b.x - p.x, dy = b.y - p.y, d = Math.hypot(dx, dy) || 1;
+  b.vx = (dx / d) * 5; b.vy = (dy / d) * 5;
+  b.x = p.x + (dx / d) * (PSINK + BR + 4); b.y = p.y + (dy / d) * (PSINK + BR + 4);
+  AudioEngine.railHit(3);
+}
+
+// ==================== DRAWING ====================
+function drawTable() {
+  const woodGrad = Xx.createLinearGradient(0, 0, W, 0);
+  woodGrad.addColorStop(0, '#5c3317');
+  woodGrad.addColorStop(0.15, '#8b5a2b');
+  woodGrad.addColorStop(0.3, '#6b3a1f');
+  woodGrad.addColorStop(0.5, '#9b6b3a');
+  woodGrad.addColorStop(0.7, '#7b4a2a');
+  woodGrad.addColorStop(0.85, '#8b5a2b');
+  woodGrad.addColorStop(1, '#5c3317');
+  Xx.fillStyle = woodGrad;
+  Xx.beginPath(); Xx.roundRect(0, 0, W, H, 12); Xx.fill();
+
+  // Wood grain
+  Xx.save(); Xx.globalAlpha = 0.08;
+  for (let i = 0; i < 40; i++) {
+    const y = i * (H / 40) + Math.sin(i * 0.8) * 3;
+    Xx.strokeStyle = i % 3 === 0 ? '#3a1a08' : '#a87040';
+    Xx.lineWidth = 0.5 + Math.random() * 0.5;
+    Xx.beginPath(); Xx.moveTo(0, y); Xx.lineTo(W, y); Xx.stroke();
+  }
+  Xx.restore();
+
+  // Rail edge
+  Xx.strokeStyle = '#3a2010'; Xx.lineWidth = 3;
+  Xx.strokeRect(IL - 2, IT - 2, IR - IL + 4, IB - IT + 4);
+  Xx.strokeStyle = '#a07040'; Xx.lineWidth = 1;
+  Xx.strokeRect(IL - 0.5, IT - 0.5, IR - IL + 1, IB - IT + 1);
+
+  // Diamond sights
+  Xx.fillStyle = '#c9a84c';
+  [0.25, 0.5, 0.75].forEach(t => {
+    drawDiamond(IL / 2, IT + (IB - IT) * t, 3);
+    drawDiamond(IR + (W - IR) / 2, IT + (IB - IT) * t, 3);
+  });
+  [0.2, 0.4, 0.6, 0.8].forEach(t => {
+    drawDiamond(IL + (IR - IL) * t, IT / 2, 3);
+    drawDiamond(IL + (IR - IL) * t, IB + (H - IB) / 2, 3);
+  });
+
+  // Felt
+  if (feltPattern) { Xx.fillStyle = feltPattern; Xx.fillRect(IL, IT, IR - IL, IB - IT); }
+
+  // Lighting
+  const lightGrad = Xx.createRadialGradient(CX, CY, 40, CX, CY, 380);
+  lightGrad.addColorStop(0, 'rgba(80,180,100,0.08)');
+  lightGrad.addColorStop(0.5, 'rgba(0,0,0,0)');
+  lightGrad.addColorStop(1, 'rgba(0,0,0,0.25)');
+  Xx.fillStyle = lightGrad; Xx.fillRect(IL, IT, IR - IL, IB - IT);
+
+  // Center line
+  Xx.save(); Xx.globalAlpha = 0.06; Xx.strokeStyle = '#fff'; Xx.lineWidth = 1;
+  Xx.setLineDash([8, 8]);
+  Xx.beginPath(); Xx.moveTo(IL + 20, CY); Xx.lineTo(IR - 20, CY); Xx.stroke();
+  Xx.setLineDash([]); Xx.restore();
+}
+
+function drawDiamond(x, y, r) {
+  Xx.beginPath();
+  Xx.moveTo(x, y - r); Xx.lineTo(x + r, y); Xx.lineTo(x, y + r); Xx.lineTo(x - r, y);
+  Xx.closePath(); Xx.fill();
+}
+
+function drawPockets() {
+  for (let p of POCKETS) {
+    Xx.beginPath(); Xx.arc(p.x, p.y, PR + 5, 0, Math.PI * 2);
+    Xx.fillStyle = 'rgba(0,0,0,0.6)'; Xx.fill();
+    Xx.beginPath(); Xx.arc(p.x, p.y, PR + 2, 0, Math.PI * 2);
+    Xx.fillStyle = '#0a0a0a'; Xx.fill();
+    Xx.beginPath(); Xx.arc(p.x, p.y, PR, 0, Math.PI * 2);
+    const pg = Xx.createRadialGradient(p.x, p.y, 0, p.x, p.y, PR);
+    pg.addColorStop(0, '#111'); pg.addColorStop(1, '#050505');
+    Xx.fillStyle = pg; Xx.fill();
+    Xx.strokeStyle = '#2a1a0a'; Xx.lineWidth = 3; Xx.stroke();
+    Xx.beginPath(); Xx.arc(p.x, p.y, PR + 4, 0, Math.PI * 2);
+    Xx.strokeStyle = p.forPlayer === 'p1' ? 'rgba(200,50,50,0.5)' : 'rgba(200,200,200,0.4)';
+    Xx.lineWidth = 2; Xx.stroke();
+  }
+}
+
+function drawBumpers() {
+  for (let bp of BUMPERS) {
+    Xx.beginPath(); Xx.arc(bp.x + 1.5, bp.y + 2, BPR + 1, 0, Math.PI * 2);
+    Xx.fillStyle = 'rgba(0,0,0,0.35)'; Xx.fill();
+    const bg = Xx.createRadialGradient(bp.x - 4, bp.y - 4, 1, bp.x, bp.y, BPR);
+    bg.addColorStop(0, '#f8e878'); bg.addColorStop(0.3, '#d4b030');
+    bg.addColorStop(0.6, '#b89520'); bg.addColorStop(0.85, '#8b6914');
+    bg.addColorStop(1, '#604808');
+    Xx.beginPath(); Xx.arc(bp.x, bp.y, BPR, 0, Math.PI * 2);
+    Xx.fillStyle = bg; Xx.fill();
+    Xx.beginPath(); Xx.arc(bp.x - 3, bp.y - 4, BPR * 0.35, 0, Math.PI * 2);
+    Xx.fillStyle = 'rgba(255,255,230,0.5)'; Xx.fill();
+    Xx.beginPath(); Xx.arc(bp.x, bp.y, BPR, 0, Math.PI * 2);
+    Xx.strokeStyle = 'rgba(100,70,20,0.6)'; Xx.lineWidth = 1.5; Xx.stroke();
+  }
+}
+
+function drawBall(b) {
+  if (b.out) return;
+  Xx.beginPath(); Xx.ellipse(b.x + 2, b.y + 3, BR * 0.9, BR * 0.5, 0, 0, Math.PI * 2);
+  Xx.fillStyle = 'rgba(0,0,0,0.3)'; Xx.fill();
+
+  const gr = Xx.createRadialGradient(b.x - 3, b.y - 4, 1, b.x + 1, b.y + 2, BR * 1.1);
+  if (b.pl === 'p1') {
+    gr.addColorStop(0, '#ff8888'); gr.addColorStop(0.3, '#dd3333');
+    gr.addColorStop(0.7, '#aa1111'); gr.addColorStop(1, '#660808');
+  } else {
+    gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.3, '#eeeeee');
+    gr.addColorStop(0.7, '#bbbbbb'); gr.addColorStop(1, '#777777');
+  }
+  Xx.beginPath(); Xx.arc(b.x, b.y, BR, 0, Math.PI * 2);
+  Xx.fillStyle = gr; Xx.fill();
+
+  const spec = Xx.createRadialGradient(b.x - 3, b.y - 4, 0, b.x - 3, b.y - 4, BR * 0.55);
+  spec.addColorStop(0, 'rgba(255,255,255,0.7)');
+  spec.addColorStop(0.5, 'rgba(255,255,255,0.15)');
+  spec.addColorStop(1, 'rgba(255,255,255,0)');
+  Xx.beginPath(); Xx.arc(b.x, b.y, BR, 0, Math.PI * 2);
+  Xx.fillStyle = spec; Xx.fill();
+
+  Xx.beginPath(); Xx.arc(b.x, b.y, BR, 0, Math.PI * 2);
+  Xx.strokeStyle = 'rgba(0,0,0,0.2)'; Xx.lineWidth = 0.8; Xx.stroke();
+
+  if (b.m) {
+    Xx.beginPath(); Xx.arc(b.x, b.y, BR * 0.3, 0, Math.PI * 2);
+    Xx.fillStyle = b.pl === 'p1' ? '#fff' : '#333'; Xx.fill();
+    Xx.strokeStyle = b.pl === 'p1' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)';
+    Xx.lineWidth = 0.5; Xx.stroke();
+  }
+
+  if (b === sel) {
+    Xx.save();
+    Xx.beginPath(); Xx.arc(b.x, b.y, BR + 5, 0, Math.PI * 2);
+    Xx.strokeStyle = '#ffe866'; Xx.lineWidth = 2.5;
+    Xx.shadowColor = '#ffe866'; Xx.shadowBlur = 10;
+    Xx.stroke(); Xx.restore();
+  }
+}
+
+function drawCue() {
+  if (!sel || !aim || moving()) return;
+  const dx = sel.x - aim.x, dy = sel.y - aim.y, len = Math.hypot(dx, dy);
+  if (len < 10) return;
+  const nx = dx / len, ny = dy / len;
+  const pwr = Math.min(len / 15, 1);
+
+  const cueLen = 120;
+  const cueStart = BR + 6 + (1 - pwr) * 30;
+  const startX = sel.x - nx * cueStart, startY = sel.y - ny * cueStart;
+  const endX = startX - nx * cueLen, endY = startY - ny * cueLen;
+
+  Xx.save();
+  // Cue shadow
+  Xx.strokeStyle = 'rgba(0,0,0,0.2)'; Xx.lineWidth = 7;
+  Xx.beginPath(); Xx.moveTo(startX + 2, startY + 2); Xx.lineTo(endX + 2, endY + 2); Xx.stroke();
+
+  // Cue body
+  const grad = Xx.createLinearGradient(startX, startY, endX, endY);
+  grad.addColorStop(0, '#f5e6c8'); grad.addColorStop(0.02, '#222');
+  grad.addColorStop(0.04, '#f5e6c8'); grad.addColorStop(0.5, '#c9a060');
+  grad.addColorStop(0.7, '#2a1508'); grad.addColorStop(0.75, '#1a0a04');
+  grad.addColorStop(1, '#0a0502');
+  Xx.strokeStyle = grad; Xx.lineWidth = 5; Xx.lineCap = 'round';
+  Xx.beginPath(); Xx.moveTo(startX, startY); Xx.lineTo(endX, endY); Xx.stroke();
+
+  // Aim line
+  const aimLen = 30 + pwr * 50;
+  Xx.setLineDash([4, 4]);
+  Xx.strokeStyle = `rgba(255,255,200,${0.2 + pwr * 0.3})`;
+  Xx.lineWidth = 1.5;
+  Xx.beginPath();
+  Xx.moveTo(sel.x + nx * (BR + 2), sel.y + ny * (BR + 2));
+  Xx.lineTo(sel.x + nx * (BR + 2 + aimLen), sel.y + ny * (BR + 2 + aimLen));
+  Xx.stroke(); Xx.setLineDash([]);
+
+  // Power bar
+  const barW = 50, barH = 5;
+  const barX = sel.x - barW / 2, barY = sel.y + BR + 14;
+  Xx.fillStyle = 'rgba(0,0,0,0.4)';
+  Xx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
+  const pwrGrad = Xx.createLinearGradient(barX, barY, barX + barW, barY);
+  pwrGrad.addColorStop(0, '#4a4'); pwrGrad.addColorStop(0.6, '#cc4'); pwrGrad.addColorStop(1, '#c44');
+  Xx.fillStyle = pwrGrad;
+  Xx.fillRect(barX, barY, barW * pwr, barH);
+  Xx.restore();
+}
+
+function drawTrails() {
+  for (let i = trails.length - 1; i >= 0; i--) {
+    const t = trails[i];
+    t.life -= 0.04;
+    if (t.life <= 0) { trails.splice(i, 1); continue; }
+    Xx.beginPath(); Xx.arc(t.x, t.y, 2 * t.life, 0, Math.PI * 2);
+    Xx.fillStyle = t.col + (t.life * 0.3) + ')'; Xx.fill();
+  }
+}
+
+function drawTurnGlow() {
+  if (over || phase === 'break') return;
+  Xx.save();
+  Xx.globalAlpha = 0.12 + Math.sin(Date.now() / 400) * 0.06;
+  if (curP === 'p1') {
+    const g = Xx.createLinearGradient(0, IB - 40, 0, IB);
+    g.addColorStop(0, 'rgba(200,50,50,0)'); g.addColorStop(1, 'rgba(200,50,50,1)');
+    Xx.fillStyle = g; Xx.fillRect(IL, IB - 40, IR - IL, 40);
+  } else {
+    const g = Xx.createLinearGradient(0, IT, 0, IT + 40);
+    g.addColorStop(0, 'rgba(200,200,200,1)'); g.addColorStop(1, 'rgba(200,200,200,0)');
+    Xx.fillStyle = g; Xx.fillRect(IL, IT, IR - IL, 40);
+  }
+  Xx.restore();
+}
+
+function draw() {
+  Xx.clearRect(0, 0, W, H);
+  drawTable(); drawTurnGlow(); drawTrails(); drawPockets(); drawBumpers();
+  for (let b of balls) drawBall(b);
+  drawCue();
+}
+
+function loop() {
+  if (over) { draw(); return; }
+  const was = moving();
+  phys(); draw();
+  if (was && !moving() && firing) { firing = false; stopped(); }
+  af = requestAnimationFrame(loop);
+}
+
+// ==================== INPUT ====================
+function gp(e) {
+  const r = Cv.getBoundingClientRect();
+  const cx = e.touches ? e.touches[0].clientX : e.clientX;
+  const cy = e.touches ? e.touches[0].clientY : e.clientY;
+  return { x: (cx - r.left) / sc, y: (cy - r.top) / sc };
+}
+
+function onD(e) {
+  e.preventDefault(); AudioEngine.resume();
+  if (!canIShoot()) return;
+  const p = gp(e);
+  for (let b of balls) {
+    if (b.out || b.pl !== myRole) continue;
+    if (Math.hypot(p.x - b.x, p.y - b.y) < BR + 16) {
+      const mb = balls.find(mm => mm.pl === myRole && mm.m);
+      if (mb && !mb.out && b !== mb) continue;
+      sel = b; aim = p; return;
+    }
+  }
+}
+
+function onM(e) { e.preventDefault(); if (sel) aim = gp(e); }
+
+function onU(e) {
+  e.preventDefault();
+  if (!sel || !aim) return;
+  const dx = sel.x - aim.x, dy = sel.y - aim.y, len = Math.hypot(dx, dy);
+  if (len > 10) {
+    const pwr = Math.min(len / 15, 1) * 16;
+    const vx = (dx / len) * pwr, vy = (dy / len) * pwr;
+    const idx = balls.indexOf(sel);
+    if (phase === 'break') {
+      brk[myRole] = true;
+      breakShots[myRole] = { ballIdx: idx, vx, vy };
+      send({ type: 'break-aim', ballIdx: idx, vx, vy });
+      hud();
+      if (brk.p1 && brk.p2) launchBreak();
+    } else {
+      sel.vx = vx; sel.vy = vy;
+      firing = true; sunk = false;
+      send({ type: 'shot', ballIdx: idx, vx, vy });
+    }
+    AudioEngine.strike(pwr / 16);
+    if (navigator.vibrate) navigator.vibrate(20);
+  }
+  sel = null; aim = null;
+}
+
+Cv.addEventListener('mousedown', onD);
+Cv.addEventListener('mousemove', onM);
+Cv.addEventListener('mouseup', onU);
+Cv.addEventListener('touchstart', onD, { passive: false });
+Cv.addEventListener('touchmove', onM, { passive: false });
+Cv.addEventListener('touchend', onU, { passive: false });
+
+// Auto-join from URL
+(function autoJoin() {
+  const params = new URLSearchParams(window.location.search);
+  const joinCode = params.get('join');
+  if (joinCode) {
+    document.getElementById('join-input').value = joinCode.toUpperCase();
+    setTimeout(() => joinGame(), 500);
+  }
+})();
+
+// Tab visibility — reconnect + resume audio
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    AudioEngine.resume();
+    if (!connected && gameStarted) {
+      forceReconnect();
+    } else if (peer && peer.disconnected && !peer.destroyed) {
+      peer.reconnect();
+    }
+  }
+});
+
+// Prevent iOS from killing the page
+document.addEventListener('freeze', () => {}, { capture: true });
+</script>
+</body>
+</html>

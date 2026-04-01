@@ -1106,26 +1106,29 @@ function rackBalls() {
   // Other 4 balls in two pairs flanking the pocket bumpers on the OUTSIDE
   // This keeps the center lane clear for the break shot
   const frontOffset = 38; // marked ball distance from pocket rail
-  const pairGap = 36;     // spacing between balls in each pair
-  // Pocket bumpers are at CX±34; balls go well outside them
-  const innerX = 62;      // first ball offset from center (outside bumper)
-  const outerX = innerX + pairGap; // second ball further out
+  // 4 balls evenly spaced across the playing area width
+  // Playing area: IL(30) to IR(390) = 360px. 5 equal slots = 72px each
+  const slot = 72;
+  const x1 = IL + slot * 1;        // 102 — leftmost
+  const x2 = IL + slot * 2;        // 174 — left inner
+  const x3 = IL + slot * 3;        // 246 — right inner
+  const x4 = IL + slot * 4;        // 318 — rightmost
   const pairY = 28;       // pair vertical offset from rail (same height as pocket bumpers)
   const p1y = IB - frontOffset;
   const p2y = IT + frontOffset;
   return [
     // Red balls — P1 home is bottom pocket
     mk(CX, p1y, '#c92b2b', 'p1', true),                           // marked, centered
-    mk(CX - innerX, IB - pairY, '#b81f1f', 'p1', false),         // left inner
-    mk(CX - outerX, IB - pairY, '#b81f1f', 'p1', false),         // left outer
-    mk(CX + innerX, IB - pairY, '#b81f1f', 'p1', false),         // right inner
-    mk(CX + outerX, IB - pairY, '#b81f1f', 'p1', false),         // right outer
+    mk(x1, IB - pairY, '#b81f1f', 'p1', false),                  // far left
+    mk(x2, IB - pairY, '#b81f1f', 'p1', false),                  // left
+    mk(x3, IB - pairY, '#b81f1f', 'p1', false),                  // right
+    mk(x4, IB - pairY, '#b81f1f', 'p1', false),                  // far right
     // White balls — P2 home is top pocket
     mk(CX, p2y, '#eceef2', 'p2', true),                           // marked, centered
-    mk(CX - innerX, IT + pairY, '#dadfe7', 'p2', false),         // left inner
-    mk(CX - outerX, IT + pairY, '#dadfe7', 'p2', false),         // left outer
-    mk(CX + innerX, IT + pairY, '#dadfe7', 'p2', false),         // right inner
-    mk(CX + outerX, IT + pairY, '#dadfe7', 'p2', false),         // right outer
+    mk(x1, IT + pairY, '#dadfe7', 'p2', false),                  // far left
+    mk(x2, IT + pairY, '#dadfe7', 'p2', false),                  // left
+    mk(x3, IT + pairY, '#dadfe7', 'p2', false),                  // right
+    mk(x4, IT + pairY, '#dadfe7', 'p2', false),                  // far right
   ];
 }
 

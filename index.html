@@ -650,36 +650,63 @@ function getFullState() {
 function applyState(data) {
   if (data.seq <= lastSyncedSeq) return; // stale
   lastSyncedSeq = data.seq;
+
+  // Don't overwrite ball positions while it's our turn and balls aren't moving on host
+  // (prevents sync from interfering with aiming)
+  const hostMoving = data.balls.some(b => !b.out && (Math.abs(b.vx) > 0.1 || Math.abs(b.vy) > 0.1));
+  const isMyTurn = data.curP === myRole;
+
   for (let i = 0; i < balls.length && i < data.balls.length; i++) {
     const src = data.balls[i];
     const b = balls[i];
-    // Smooth interpolation for small differences, snap for large
-    const dx = src.x - b.x, dy = src.y - b.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist > 30 || src.out !== b.out) {
-      // Snap
-      b.x = src.x; b.y = src.y;
-    } else if (dist > 1) {
-      // Lerp
-      b.x += dx * 0.3; b.y += dy * 0.3;
+
+    // Snap velocities below threshold to zero (prevents ghost movement)
+    const svx = Math.abs(src.vx) < 0.1 ? 0 : src.vx;
+    const svy = Math.abs(src.vy) < 0.1 ? 0 : src.vy;
+
+    // Always sync out status
+    b.out = src.out;
+
+    if (isMyTurn && !hostMoving && !firing) {
+      // It's our turn and nothing is moving — only sync positions, not velocities
+      // This prevents tiny residual velocities from blocking our shot
+      const dx = src.x - b.x, dy = src.y - b.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 30) { b.x = src.x; b.y = src.y; }
+      else if (dist > 2) { b.x += (src.x - b.x) * 0.3; b.y += (src.y - b.y) * 0.3; }
+      b.vx = 0; b.vy = 0;
+    } else {
+      // Normal sync — apply everything
+      const dx = src.x - b.x, dy = src.y - b.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 30) { b.x = src.x; b.y = src.y; }
+      else if (dist > 1) { b.x += dx * 0.3; b.y += dy * 0.3; }
+      b.vx = svx; b.vy = svy;
     }
-    b.vx = src.vx; b.vy = src.vy; b.out = src.out;
   }
+
   curP = data.curP; phase = data.phase; over = data.over;
   if (data.brk) { brk.p1 = data.brk.p1; brk.p2 = data.brk.p2; }
+
+  // Clear firing flag if nothing is moving after sync
+  if (!moving()) { firing = false; }
+
   hud();
 }
 
-// Host periodic sync (every 3s during active physics, 10s when idle)
+// Host periodic sync — only during active physics, not when idle
 let syncTimer = null;
 function startSyncLoop() {
   if (!isHost) return;
   if (syncTimer) clearInterval(syncTimer);
   syncTimer = setInterval(() => {
     if (connected && gameStarted && balls) {
-      send(getFullState());
+      // Only sync during active movement or right after stopping
+      if (moving()) {
+        send(getFullState());
+      }
     }
-  }, moving() ? 3000 : 10000);
+  }, 5000);
 }
 
 function getJoinUrl() {
@@ -932,8 +959,13 @@ function stopped() {
     if (!sunk) curP = curP === 'p1' ? 'p2' : 'p1';
   }
   sunk = false; sel = null; aim = null; hud();
-  // Host sends authoritative state after each turn
-  if (isHost) { send(getFullState()); }
+  // Host sends authoritative state after each turn — send twice for reliability
+  if (isHost) {
+    const state = getFullState();
+    send(state);
+    // Second send after short delay to ensure guest receives clean state
+    setTimeout(() => { if (connected) send(getFullState()); }, 200);
+  }
 }
 
 function chkWin() {
@@ -1265,11 +1297,27 @@ function draw() {
   drawCue();
 }
 
+// Safety: if firing has been true for too long with no movement, clear it
+let firingStartTime = 0;
+
 function loop() {
   if (over) { draw(); return; }
   const was = moving();
   phys(); draw();
-  if (was && !moving() && firing) { firing = false; stopped(); }
+  if (was && !moving() && firing) {
+    firing = false; firingStartTime = 0;
+    stopped();
+  }
+  // Safety valve: if firing but nothing has moved for 2 seconds, unstick
+  if (firing && !moving()) {
+    if (firingStartTime === 0) firingStartTime = Date.now();
+    else if (Date.now() - firingStartTime > 2000) {
+      firing = false; firingStartTime = 0;
+      stopped();
+    }
+  } else if (firing && moving()) {
+    firingStartTime = 0;
+  }
   af = requestAnimationFrame(loop);
 }
 

@@ -1106,13 +1106,17 @@ function rackBalls() {
   // Other 4 balls in two pairs flanking the pocket bumpers on the OUTSIDE
   // This keeps the center lane clear for the break shot
   const frontOffset = 38; // marked ball distance from pocket rail
-  // 4 balls evenly spaced across the playing area width
-  // Playing area: IL(30) to IR(390) = 360px. 5 equal slots = 72px each
-  const slot = 72;
-  const x1 = IL + slot * 1;        // 102 — leftmost
-  const x2 = IL + slot * 2;        // 174 — left inner
-  const x3 = IL + slot * 3;        // 246 — right inner
-  const x4 = IL + slot * 4;        // 318 — rightmost
+  // 4 balls positioned beside the pocket bumpers, evenly spaced outward
+  // Pocket bumpers at CX±38 (x=172, 248), BPR=16, BR=14
+  // Inner balls sit just outside bumper edge, outer balls halfway to rail
+  const bumpEdgeL = CX - 38 - BPR - BR - 2;  // ~142 — just left of left bumper
+  const bumpEdgeR = CX + 38 + BPR + BR + 2;  // ~278 — just right of right bumper
+  const outerL = (IL + BR + bumpEdgeL) / 2;   // ~88 — halfway to left rail
+  const outerR = (IR - BR + bumpEdgeR) / 2;   // ~332 — halfway to right rail
+  const x1 = outerL;
+  const x2 = bumpEdgeL;
+  const x3 = bumpEdgeR;
+  const x4 = outerR;
   const pairY = 28;       // pair vertical offset from rail (same height as pocket bumpers)
   const p1y = IB - frontOffset;
   const p2y = IT + frontOffset;

@@ -1046,12 +1046,13 @@ const BUMPERS = [
   // Pocket bumpers (2 flanking each pocket — pulled back from entrance)
   { x: CX - 38, y: IT + 10, col: 'white' }, { x: CX + 38, y: IT + 10, col: 'white' },
   { x: CX - 38, y: IB - 10, col: 'red' }, { x: CX + 38, y: IB - 10, col: 'red' },
-  // Center cross — vertical arm (scaled for taller table)
-  { x: CX, y: CY - 80, col: 'red' }, { x: CX, y: CY - 40, col: 'white' },
-  { x: CX, y: CY + 40, col: 'white' }, { x: CX, y: CY + 80, col: 'red' },
-  // Center cross — horizontal arm
-  { x: CX - 66, y: CY, col: 'white' }, { x: CX - 33, y: CY, col: 'red' },
-  { x: CX + 33, y: CY, col: 'red' }, { x: CX + 66, y: CY, col: 'white' }
+  // Center cross — symmetric square pattern (same spacing both arms)
+  // Vertical arm
+  { x: CX, y: CY - 90, col: 'red' }, { x: CX, y: CY - 45, col: 'white' },
+  { x: CX, y: CY + 45, col: 'white' }, { x: CX, y: CY + 90, col: 'red' },
+  // Horizontal arm
+  { x: CX - 90, y: CY, col: 'white' }, { x: CX - 45, y: CY, col: 'red' },
+  { x: CX + 45, y: CY, col: 'red' }, { x: CX + 90, y: CY, col: 'white' }
 ];
 
 function generateFelt() {

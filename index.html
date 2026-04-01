@@ -3,474 +3,654 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Bumper Pool</title>
+<title>Bumper Pool v2</title>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#080b12;
+  --panel:#131a25;
+  --panel-2:#1a2230;
+  --ink:#f5ecd8;
+  --muted:#9e9483;
+  --gold:#d7b15a;
+  --gold-2:#8f6a2a;
+  --red:#db5c5c;
+  --white:#f0f2f5;
+  --line:rgba(215,177,90,.2);
+}
+html,body{height:100%}
 body{
-  background:#0d0d1a;display:flex;flex-direction:column;align-items:center;
-  min-height:100vh;min-height:100dvh;font-family:'Georgia','Times New Roman',serif;
-  color:#f0e6d3;padding:8px;-webkit-user-select:none;user-select:none;
-  overflow:hidden;
+  min-height:100vh;min-height:100dvh;overflow:hidden;
+  background:
+    radial-gradient(circle at top,rgba(215,177,90,.08),transparent 26%),
+    radial-gradient(circle at 20% 20%,rgba(255,255,255,.04),transparent 18%),
+    linear-gradient(180deg,#101623 0%,#090d14 100%);
+  color:var(--ink);
+  font-family:Georgia,"Times New Roman",serif;
+  -webkit-user-select:none;user-select:none;
+  display:flex;justify-content:center;
 }
-h1{font-size:1.3em;letter-spacing:3px;text-transform:uppercase;color:#c9a84c;
-  margin:8px 0;text-shadow:0 2px 8px rgba(201,168,76,0.3);}
-
-/* LOBBY */
-#lobby{
-  background:linear-gradient(145deg,rgba(20,20,35,0.95),rgba(10,10,20,0.98));
-  border:1px solid rgba(201,168,76,0.25);border-radius:14px;
-  padding:28px;text-align:center;max-width:360px;width:100%;
-  box-shadow:0 8px 32px rgba(0,0,0,0.5);
+.app{width:min(100%,980px);padding:10px 10px 14px;display:flex;flex-direction:column;align-items:center;gap:10px}
+h1{
+  font-size:clamp(1.1rem,4vw,1.7rem);letter-spacing:.28em;text-transform:uppercase;
+  color:var(--gold);text-shadow:0 2px 16px rgba(215,177,90,.35);margin-top:2px
 }
-#lobby h2{color:#c9a84c;font-size:1.1em;margin-bottom:16px;letter-spacing:2px;}
-.lobby-btn{
-  background:linear-gradient(135deg,#c9a84c,#a8872e);color:#1a1a2e;border:none;
-  padding:12px 28px;font-size:0.95em;font-family:'Georgia',serif;text-transform:uppercase;
-  letter-spacing:1.5px;border-radius:6px;cursor:pointer;font-weight:bold;
-  margin:6px;display:inline-block;box-shadow:0 3px 12px rgba(201,168,76,0.3);
-  transition:all 0.2s;
+.panel{
+  width:min(100%,760px);background:linear-gradient(180deg,rgba(26,34,48,.96),rgba(12,17,25,.98));
+  border:1px solid var(--line);border-radius:22px;box-shadow:0 18px 60px rgba(0,0,0,.4);backdrop-filter:blur(8px)
 }
-.lobby-btn:hover{background:linear-gradient(135deg,#e0c070,#c9a84c);transform:translateY(-1px);
-  box-shadow:0 5px 16px rgba(201,168,76,0.4);}
-.lobby-btn:active{transform:translateY(0);}
-#room-code{font-size:2em;color:#c9a84c;letter-spacing:8px;font-weight:bold;
-  margin:12px 0;font-family:monospace;text-shadow:0 0 10px rgba(201,168,76,0.4);}
-#join-input{
-  background:#151520;border:2px solid rgba(201,168,76,0.5);color:#f0e6d3;
-  padding:10px 14px;font-size:1.3em;font-family:monospace;text-align:center;
-  width:170px;border-radius:6px;letter-spacing:6px;text-transform:uppercase;
-  outline:none;transition:border-color 0.2s;
+#lobby{padding:18px;display:flex;flex-direction:column;gap:14px}
+.section-title{font-size:.78rem;color:var(--gold);text-transform:uppercase;letter-spacing:.24em;margin-bottom:8px}
+.hero{
+  border:1px solid rgba(215,177,90,.16);border-radius:18px;padding:18px;
+  background:radial-gradient(circle at top left,rgba(215,177,90,.12),transparent 34%),linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0))
 }
-#join-input:focus{border-color:#c9a84c;}
-#status-msg{color:#888;font-size:0.8em;margin-top:10px;min-height:20px;transition:opacity 0.3s;}
-.conn-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle;}
-.conn-green{background:#4a4;box-shadow:0 0 4px #4a4;}
-.conn-yellow{background:#cc4;box-shadow:0 0 4px #cc4;}
-.conn-red{background:#a44;box-shadow:0 0 4px #a44;}
-
-/* GAME */
-#game{display:none;flex-direction:column;align-items:center;}
-#you-are{font-size:0.75em;color:rgba(201,168,76,0.5);margin-bottom:4px;letter-spacing:1px;}
-#scoreboard{
-  display:flex;gap:12px;margin-bottom:6px;
-  background:linear-gradient(135deg,rgba(15,15,25,0.9),rgba(5,5,15,0.95));
-  padding:8px 20px;border-radius:10px;border:1px solid rgba(201,168,76,0.15);
-  align-items:center;box-shadow:0 4px 16px rgba(0,0,0,0.3);
+.hero h2{font-size:1.15rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+.hero p{color:var(--muted);font-size:.88rem;line-height:1.45}
+.lobby-grid{display:grid;grid-template-columns:1fr;gap:14px}
+.card{
+  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015));
+  border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:14px
 }
-.pi{text-align:center;min-width:90px;}
-.pn{font-size:0.85em;font-weight:bold;text-transform:uppercase;letter-spacing:1.5px;}
-.pn.red{color:#e05555;text-shadow:0 0 6px rgba(224,85,85,0.3);}
-.pn.wht{color:#ddd;text-shadow:0 0 6px rgba(255,255,255,0.2);}
-.bd{margin-top:3px;display:flex;justify-content:center;gap:3px;}
-.ball-icon{width:12px;height:12px;border-radius:50%;display:inline-block;}
-.ball-icon.red-ball{background:radial-gradient(circle at 35% 35%,#ff6666,#cc2222,#881111);}
-.ball-icon.white-ball{background:radial-gradient(circle at 35% 35%,#ffffff,#cccccc,#999999);}
-.ball-icon.sunk{opacity:0.15;}
-#tb{text-align:center;min-width:100px;}
-#ti{font-size:0.82em;color:#c9a84c;}
-#pm{font-size:0.65em;color:#777;margin-top:2px;min-height:14px;}
-#conn-status{font-size:0.55em;color:#555;margin-top:2px;}
-canvas{border-radius:8px;cursor:crosshair;touch-action:none;max-width:100%;
-  box-shadow:0 8px 40px rgba(0,0,0,0.6);}
-#ins{font-size:0.65em;color:#444;margin-top:6px;text-align:center;}
-
-/* DISCONNECTED OVERLAY */
-#dc-overlay{
-  display:none;position:fixed;top:0;left:0;right:0;bottom:0;
-  background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;
-  justify-content:center;z-index:8;
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip,.ghost-btn,.primary-btn,.secondary-btn{
+  border:none;border-radius:999px;padding:11px 16px;font:inherit;cursor:pointer;transition:.18s transform,.18s box-shadow,.18s opacity
 }
-#dc-overlay.show{display:flex;}
-#dc-text{font-size:1.2em;color:#c9a84c;margin-bottom:8px;}
-#dc-sub{font-size:0.8em;color:#888;margin-bottom:16px;}
-#dc-spinner{width:30px;height:30px;border:3px solid #333;border-top-color:#c9a84c;
-  border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:16px;}
+.chip{
+  background:rgba(255,255,255,.05);color:var(--ink);border:1px solid rgba(255,255,255,.08);
+  font-size:.92rem
+}
+.chip.active{background:linear-gradient(135deg,var(--gold),#a57b34);color:#1d1508;box-shadow:0 8px 24px rgba(215,177,90,.24)}
+.chip.dim{opacity:.5}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.field{
+  width:100%;background:#0e1420;color:var(--ink);border:1px solid rgba(255,255,255,.1);
+  border-radius:14px;padding:12px 14px;font:inherit;outline:none
+}
+.field:focus{border-color:rgba(215,177,90,.5);box-shadow:0 0 0 3px rgba(215,177,90,.12)}
+.ghost-btn,.secondary-btn{
+  background:rgba(255,255,255,.06);color:var(--ink);border:1px solid rgba(255,255,255,.08)
+}
+.primary-btn{
+  background:linear-gradient(135deg,var(--gold),#a67d35);color:#201608;font-weight:bold;
+  box-shadow:0 10px 28px rgba(215,177,90,.25)
+}
+.mode-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.mode-card{
+  padding:16px;border-radius:18px;border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02))
+}
+.mode-card h3{font-size:1rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.mode-card p{color:var(--muted);font-size:.84rem;line-height:1.4;margin-bottom:12px}
+#room-code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:2rem;letter-spacing:.35em;
+  color:var(--gold);text-align:center;margin:8px 0 12px;text-shadow:0 0 18px rgba(215,177,90,.34)
+}
+.status{min-height:22px;color:var(--muted);font-size:.84rem}
+.stats-box{
+  border:1px solid rgba(215,177,90,.16);border-radius:16px;padding:12px;
+  background:linear-gradient(180deg,rgba(215,177,90,.08),rgba(255,255,255,.02))
+}
+.stats-box strong{color:var(--gold)}
+.muted{color:var(--muted)}
+#game{display:none;flex-direction:column;align-items:center;gap:10px;width:100%}
+#topbar{
+  width:min(100%,920px);display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:stretch
+}
+.score-pane,.center-pane{
+  background:linear-gradient(180deg,rgba(18,25,36,.95),rgba(11,16,24,.98));
+  border:1px solid var(--line);border-radius:18px;padding:10px 12px;box-shadow:0 8px 24px rgba(0,0,0,.25)
+}
+.score-pane.active-red{box-shadow:0 0 0 1px rgba(219,92,92,.35),0 0 22px rgba(219,92,92,.16)}
+.score-pane.active-white{box-shadow:0 0 0 1px rgba(255,255,255,.35),0 0 22px rgba(255,255,255,.12)}
+.player-label{font-size:.76rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.player-name{font-size:1rem;font-weight:bold;margin-top:3px}
+.player-name.red{color:var(--red)}
+.player-name.white{color:var(--white)}
+.ball-strip{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.ball-icon{width:13px;height:13px;border-radius:50%;box-shadow:inset -2px -2px 4px rgba(0,0,0,.35)}
+.ball-icon.red-ball{background:radial-gradient(circle at 32% 28%,#ffafaf,#d93e3e 52%,#7a1111)}
+.ball-icon.white-ball{background:radial-gradient(circle at 32% 28%,#fff,#d9dfe7 55%,#8a95a1)}
+.ball-icon.sunk{opacity:.18}
+.center-pane{display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:170px;text-align:center}
+#turn-label{font-size:1rem;color:var(--gold);letter-spacing:.12em;text-transform:uppercase}
+#phase-label{font-size:.76rem;color:var(--muted);margin-top:4px}
+#matchup-live{font-size:.72rem;color:var(--muted);margin-top:6px;min-height:16px}
+#conn-status{font-size:.68rem;color:#7f8792;margin-top:3px;min-height:14px}
+.conn-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.conn-green{background:#4db870;box-shadow:0 0 6px #4db870}
+.conn-yellow{background:#d9c24a;box-shadow:0 0 6px #d9c24a}
+.conn-red{background:#d45d5d;box-shadow:0 0 6px #d45d5d}
+#table-shell{
+  position:relative;padding:12px;border-radius:32px;
+  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+  border:1px solid rgba(255,255,255,.08);box-shadow:0 18px 60px rgba(0,0,0,.45)
+}
+#table-shell.turn-red{box-shadow:0 0 0 1px rgba(219,92,92,.38),0 0 40px rgba(219,92,92,.18),0 18px 60px rgba(0,0,0,.45)}
+#table-shell.turn-white{box-shadow:0 0 0 1px rgba(255,255,255,.4),0 0 40px rgba(255,255,255,.16),0 18px 60px rgba(0,0,0,.45)}
+#table-shell.break-mode{box-shadow:0 0 0 1px rgba(215,177,90,.38),0 0 44px rgba(215,177,90,.18),0 18px 60px rgba(0,0,0,.45)}
+canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:crosshair}
+#ins{font-size:.76rem;color:#7f8792;text-align:center;line-height:1.45}
+.overlay{
+  display:none;position:fixed;inset:0;background:rgba(4,6,10,.88);z-index:20;
+  align-items:center;justify-content:center;padding:18px
+}
+.overlay.show{display:flex}
+.overlay-card{
+  width:min(100%,420px);padding:22px;border-radius:22px;
+  background:linear-gradient(180deg,rgba(23,31,44,.98),rgba(11,16,24,.99));
+  border:1px solid var(--line);text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.5)
+}
+.overlay-title{font-size:2rem;color:var(--gold);letter-spacing:.08em;text-transform:uppercase}
+.overlay-copy{color:var(--muted);line-height:1.5;margin:10px 0 14px}
+#win-stats,#rematch-status{min-height:22px;font-size:.88rem;color:var(--ink);margin-bottom:12px}
+#confetti-canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:21}
+.spinner{
+  width:34px;height:34px;border:3px solid rgba(255,255,255,.12);border-top-color:var(--gold);
+  border-radius:50%;animation:spin .85s linear infinite;margin:0 auto 14px
+}
 @keyframes spin{to{transform:rotate(360deg)}}
-
-/* WIN OVERLAY */
-#ov{
-  display:none;position:fixed;top:0;left:0;right:0;bottom:0;
-  background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;
-  justify-content:center;z-index:10;
+@media (min-width:760px){
+  #lobby{padding:22px}
+  .lobby-grid{grid-template-columns:1.05fr .95fr}
+  .mode-grid{grid-template-columns:1fr 1fr}
 }
-#ov.show{display:flex;}
-#wt{font-size:2.2em;color:#c9a84c;text-shadow:0 0 30px rgba(201,168,76,0.6);
-  margin-bottom:20px;text-align:center;letter-spacing:2px;}
-#rb{
-  background:linear-gradient(135deg,#c9a84c,#a8872e);color:#1a1a2e;border:none;
-  padding:12px 32px;font-size:1em;font-family:'Georgia',serif;text-transform:uppercase;
-  letter-spacing:2px;border-radius:6px;cursor:pointer;font-weight:bold;
-  box-shadow:0 4px 16px rgba(201,168,76,0.3);transition:all 0.2s;
-}
-#rb:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(201,168,76,0.5);}
-#confetti-canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:11;}
 </style>
 </head>
 <body>
-<h1>🎱 Bumper Pool 🎱</h1>
+<div class="app">
+  <h1>Bumper Pool</h1>
 
-<div id="lobby">
-  <h2>MULTIPLAYER</h2>
-  <div id="lobby-menu">
-    <button class="lobby-btn" onclick="createGame()">Create Game</button><br>
-    <input id="join-input" placeholder="CODE" maxlength="4"><br>
-    <button class="lobby-btn" onclick="joinGame()">Join Game</button>
+  <div id="lobby" class="panel">
+    <div class="hero">
+      <h2>Pick your profile, then create or join a table</h2>
+      <p>Persistent matchup records stay on this device. Your selected name is sent over WebRTC so both sides see the same players and rematch against the right opponent.</p>
+    </div>
+
+    <div class="lobby-grid">
+      <div class="card">
+        <div class="section-title">Who Are You?</div>
+        <div id="player-list" class="chips"></div>
+        <div class="row" style="margin-top:10px">
+          <input id="new-player-input" class="field" maxlength="18" placeholder="Add a player name">
+          <button class="primary-btn" id="add-player-btn">Add Player</button>
+        </div>
+        <div id="player-prompt" class="status"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Matchup</div>
+        <div class="row" style="margin-bottom:10px">
+          <select id="opponent-select" class="field"></select>
+        </div>
+        <div id="lobby-stats" class="stats-box muted">Select yourself to see recent matchup stats.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Play</div>
+      <div class="mode-grid" id="lobby-menu">
+        <div class="mode-card">
+          <h3>Create Game</h3>
+          <p>Host a room, share the code, and wait for your opponent to connect.</p>
+          <button class="primary-btn" id="create-btn">Create Room</button>
+        </div>
+        <div class="mode-card">
+          <h3>Join Game</h3>
+          <p>Enter a four-character code or use a shared link.</p>
+          <input id="join-input" class="field" placeholder="CODE" maxlength="4" style="text-transform:uppercase;margin-bottom:10px">
+          <button class="secondary-btn" id="join-btn">Join Room</button>
+        </div>
+      </div>
+
+      <div id="lobby-waiting" style="display:none">
+        <div class="section-title">Room</div>
+        <div id="room-code">----</div>
+        <div class="row" style="justify-content:center">
+          <button class="primary-btn" id="copy-btn">Copy Link</button>
+          <button class="secondary-btn" id="share-btn">Share</button>
+        </div>
+        <div id="status-msg" class="status" style="text-align:center;margin-top:12px"></div>
+      </div>
+    </div>
   </div>
-  <div id="lobby-waiting" style="display:none">
-    <div style="font-size:0.9em;color:#999;">Share this code:</div>
-    <div id="room-code">----</div>
-    <button class="lobby-btn" id="copy-btn" onclick="copyLink()" style="font-size:0.8em;padding:8px 18px;">📋 Copy Link</button>
-    <button class="lobby-btn" id="share-btn" onclick="shareLink()" style="font-size:0.8em;padding:8px 18px;">📤 Share</button>
-    <div id="status-msg">Waiting for opponent...</div>
+
+  <div id="game">
+    <div id="topbar">
+      <div id="p1-pane" class="score-pane">
+        <div class="player-label">Red</div>
+        <div id="p1-name" class="player-name red">Player 1</div>
+        <div id="p1-balls" class="ball-strip"></div>
+      </div>
+      <div class="center-pane">
+        <div id="turn-label">Break</div>
+        <div id="phase-label">Both marked balls must bank off the right cushion.</div>
+        <div id="matchup-live"></div>
+        <div id="conn-status"></div>
+      </div>
+      <div id="p2-pane" class="score-pane">
+        <div class="player-label">White</div>
+        <div id="p2-name" class="player-name white">Player 2</div>
+        <div id="p2-balls" class="ball-strip"></div>
+      </div>
+    </div>
+
+    <div id="table-shell">
+      <canvas id="c"></canvas>
+    </div>
+    <div id="ins">Tap your ball. Drag back to set line and power. Release to shoot. On the break, both marked balls bank to each player’s right side rail.</div>
+  </div>
+
+  <div id="dc-overlay" class="overlay">
+    <div class="overlay-card">
+      <div class="spinner"></div>
+      <div class="overlay-title" style="font-size:1.5rem">Connection Lost</div>
+      <div id="dc-sub" class="overlay-copy">Reconnecting...</div>
+      <button class="primary-btn" id="retry-btn">Retry Now</button>
+    </div>
+  </div>
+
+  <div id="ov" class="overlay">
+    <canvas id="confetti-canvas"></canvas>
+    <div class="overlay-card" style="position:relative;z-index:22">
+      <div id="wt" class="overlay-title">Winner</div>
+      <div id="win-stats" class="overlay-copy"></div>
+      <div id="rematch-status"></div>
+      <button id="rb" class="primary-btn">Play Again</button>
+    </div>
   </div>
 </div>
-
-<div id="game">
-  <div id="you-are"></div>
-  <div id="scoreboard">
-    <div class="pi"><div class="pn red">Player 1 🔴</div><div class="bd" id="jd"></div></div>
-    <div id="tb"><div id="ti">—</div><div id="pm"></div><div id="conn-status"></div></div>
-    <div class="pi"><div class="pn wht">Player 2 ⚪</div><div class="bd" id="md"></div></div>
-  </div>
-  <canvas id="c"></canvas>
-  <div id="ins">Tap your ball · Drag to aim · Release to shoot</div>
-</div>
-
-<div id="dc-overlay">
-  <div id="dc-spinner"></div>
-  <div id="dc-text">Connection Lost</div>
-  <div id="dc-sub">Reconnecting...</div>
-  <button class="lobby-btn" onclick="forceReconnect()" style="font-size:0.8em;padding:8px 18px;">Retry Now</button>
-</div>
-
-<div id="ov"><canvas id="confetti-canvas"></canvas><div id="wt"></div><button id="rb" onclick="requestRematch()">Play Again</button></div>
 
 <script>
-// ==================== AUDIO ENGINE ====================
+const STORE_KEY = 'bumperPoolV2Profiles';
+const DEFAULT_PLAYERS = ['Justin', 'Morpheus', 'Ryan'];
+
+const $ = id => document.getElementById(id);
+const Cv = $('c');
+const Xx = Cv.getContext('2d');
+
 const AudioEngine = {
-  ctx: null,
-  init() {
-    if (this.ctx) return;
-    try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
-  },
-  resume() {
-    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
-  },
-  ballHit(force) {
+  ctx:null,
+  init(){ if (this.ctx) return; try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {} },
+  resume(){ if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {}); },
+  tone(type,freq,vol,dur,filterType,filterFreq){
     if (!this.ctx) return;
-    const vol = Math.min(1, force / 12) * 0.4;
-    if (vol < 0.02) return;
     try {
-      const o = this.ctx.createOscillator();
-      const g = this.ctx.createGain();
-      const f = this.ctx.createBiquadFilter();
-      f.type = 'highpass'; f.frequency.value = 2000;
-      o.type = 'triangle';
-      o.frequency.setValueAtTime(3500 + force * 200, this.ctx.currentTime);
-      o.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.04);
-      g.gain.setValueAtTime(vol, this.ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
-      o.connect(f); f.connect(g); g.connect(this.ctx.destination);
-      o.start(); o.stop(this.ctx.currentTime + 0.1);
+      const t = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      let node = osc;
+      if (filterType) {
+        const f = this.ctx.createBiquadFilter();
+        f.type = filterType;
+        f.frequency.value = filterFreq;
+        osc.connect(f);
+        node = f;
+      }
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(vol, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      node.connect(gain); gain.connect(this.ctx.destination);
+      osc.start(t); osc.stop(t + dur);
     } catch(e) {}
   },
-  railHit(force) {
-    if (!this.ctx) return;
-    const vol = Math.min(1, force / 10) * 0.25;
-    if (vol < 0.02) return;
-    try {
-      const o = this.ctx.createOscillator();
-      const g = this.ctx.createGain();
-      o.type = 'sine';
-      o.frequency.setValueAtTime(200 + force * 30, this.ctx.currentTime);
-      o.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.06);
-      g.gain.setValueAtTime(vol, this.ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
-      o.connect(g); g.connect(this.ctx.destination);
-      o.start(); o.stop(this.ctx.currentTime + 0.12);
-    } catch(e) {}
-  },
-  bumperHit(force) {
-    if (!this.ctx) return;
-    const vol = Math.min(1, force / 8) * 0.3;
-    if (vol < 0.02) return;
-    try {
-      const o = this.ctx.createOscillator();
-      const o2 = this.ctx.createOscillator();
-      const g = this.ctx.createGain();
-      o.type = 'sine'; o2.type = 'sine';
-      o.frequency.value = 4200; o2.frequency.value = 6300;
-      g.gain.setValueAtTime(vol, this.ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
-      o.connect(g); o2.connect(g); g.connect(this.ctx.destination);
-      o.start(); o2.start();
-      o.stop(this.ctx.currentTime + 0.18); o2.stop(this.ctx.currentTime + 0.18);
-    } catch(e) {}
-  },
-  pocket() {
+  ballHit(force){ this.tone('triangle', 3400 + force * 220, Math.min(.4, force / 20), .08, 'highpass', 1900); },
+  railHit(force){ this.tone('sine', 180 + force * 26, Math.min(.24, force / 28), .11); },
+  bumperHit(force){ this.tone('triangle', 2800 + force * 120, Math.min(.28, force / 20), .14, 'bandpass', 3100); },
+  pocket(){
     if (!this.ctx) return;
     try {
       const t = this.ctx.currentTime;
       const o = this.ctx.createOscillator();
       const g = this.ctx.createGain();
       o.type = 'sine';
-      o.frequency.setValueAtTime(600, t);
-      o.frequency.exponentialRampToValueAtTime(120, t + 0.25);
-      g.gain.setValueAtTime(0.35, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      o.frequency.setValueAtTime(620, t);
+      o.frequency.exponentialRampToValueAtTime(120, t + .28);
+      g.gain.setValueAtTime(.34, t);
+      g.gain.exponentialRampToValueAtTime(.001, t + .3);
       o.connect(g); g.connect(this.ctx.destination);
-      o.start(); o.stop(t + 0.35);
-      const o2 = this.ctx.createOscillator();
-      const g2 = this.ctx.createGain();
-      o2.type = 'square'; o2.frequency.value = 100;
-      g2.gain.setValueAtTime(0.15, t);
-      g2.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
-      o2.connect(g2); g2.connect(this.ctx.destination);
-      o2.start(); o2.stop(t + 0.08);
+      o.start(t); o.stop(t + .32);
     } catch(e) {}
   },
-  strike(power) {
+  strike(power){
     if (!this.ctx) return;
     try {
       const t = this.ctx.currentTime;
-      const vol = 0.15 + power * 0.25;
-      const n = this.ctx.createBufferSource();
-      const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.06, this.ctx.sampleRate);
+      const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * .05, this.ctx.sampleRate);
       const d = buf.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (d.length * 0.15));
-      n.buffer = buf;
-      const f = this.ctx.createBiquadFilter();
-      f.type = 'bandpass'; f.frequency.value = 2500; f.Q.value = 2;
-      const g = this.ctx.createGain();
-      g.gain.setValueAtTime(vol, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
-      n.connect(f); f.connect(g); g.connect(this.ctx.destination);
-      n.start();
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (d.length * .18));
+      const src = this.ctx.createBufferSource();
+      const filter = this.ctx.createBiquadFilter();
+      const gain = this.ctx.createGain();
+      src.buffer = buf;
+      filter.type = 'bandpass';
+      filter.frequency.value = 2500;
+      gain.gain.setValueAtTime(.15 + power * .24, t);
+      gain.gain.exponentialRampToValueAtTime(.001, t + .08);
+      src.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+      src.start();
     } catch(e) {}
   },
-  win() {
-    if (!this.ctx) return;
-    try {
-      const t = this.ctx.currentTime;
-      [523, 659, 784, 1047].forEach((freq, i) => {
-        const o = this.ctx.createOscillator();
-        const g = this.ctx.createGain();
-        o.type = 'triangle'; o.frequency.value = freq;
-        g.gain.setValueAtTime(0, t + i * 0.12);
-        g.gain.linearRampToValueAtTime(0.2, t + i * 0.12 + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.4);
-        o.connect(g); g.connect(this.ctx.destination);
-        o.start(t + i * 0.12); o.stop(t + i * 0.12 + 0.5);
-      });
-    } catch(e) {}
-  }
+  win(){ [523,659,784,1047].forEach((f,i) => this.tone('triangle', f, .17, .35 + i * .02)); }
 };
 
-// ==================== CONFETTI ====================
 const Confetti = {
-  canvas: null, ctx: null, particles: [], running: false,
-  init() {
-    this.canvas = document.getElementById('confetti-canvas');
-    this.ctx = this.canvas.getContext('2d');
+  canvas:null,ctx:null,parts:[],run:false,
+  init(){ this.canvas = $('confetti-canvas'); this.ctx = this.canvas.getContext('2d'); },
+  launch(color){
+    this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight;
+    const pal = color === 'red' ? ['#ff8f8f','#ffcb74','#d44a4a','#f1df8c'] : ['#ffffff','#cad3dd','#f1df8c','#8fd2ff'];
+    this.parts = Array.from({ length: 120 }, () => ({
+      x: this.canvas.width * .5 + (Math.random() - .5) * 260,
+      y: this.canvas.height * .4 + (Math.random() - .5) * 30,
+      vx: (Math.random() - .5) * 14,
+      vy: -Math.random() * 16 - 2,
+      w: 4 + Math.random() * 7,
+      h: 7 + Math.random() * 10,
+      rot: Math.random() * Math.PI,
+      rv: (Math.random() - .5) * .34,
+      a:1,
+      c: pal[Math.floor(Math.random() * pal.length)]
+    }));
+    this.run = true;
+    this.tick();
   },
-  launch(color) {
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
-    this.particles = [];
-    const colors = color === 'red'
-      ? ['#ff4444','#ff6666','#cc2222','#ffaa44','#ffdd44']
-      : ['#ffffff','#dddddd','#aaaaff','#ffdd44','#44ddff'];
-    for (let i = 0; i < 120; i++) {
-      this.particles.push({
-        x: this.canvas.width * 0.5 + (Math.random() - 0.5) * 200,
-        y: this.canvas.height * 0.4,
-        vx: (Math.random() - 0.5) * 14,
-        vy: -Math.random() * 16 - 4,
-        w: 4 + Math.random() * 6, h: 6 + Math.random() * 10,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        rot: Math.random() * Math.PI * 2,
-        rv: (Math.random() - 0.5) * 0.3, life: 1,
-      });
-    }
-    this.running = true; this.tick();
-  },
-  tick() {
-    if (!this.running) return;
+  tick(){
+    if (!this.run) return;
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     let alive = false;
-    for (const p of this.particles) {
-      if (p.life <= 0) continue;
+    for (const p of this.parts) {
+      if (p.a <= 0) continue;
       alive = true;
-      p.x += p.vx; p.y += p.vy; p.vy += 0.35; p.vx *= 0.99;
-      p.rot += p.rv; p.life -= 0.006;
+      p.x += p.vx; p.y += p.vy; p.vy += .35; p.vx *= .99; p.rot += p.rv; p.a -= .007;
       this.ctx.save();
       this.ctx.translate(p.x, p.y); this.ctx.rotate(p.rot);
-      this.ctx.globalAlpha = Math.max(0, p.life);
-      this.ctx.fillStyle = p.color;
+      this.ctx.globalAlpha = Math.max(0, p.a);
+      this.ctx.fillStyle = p.c;
       this.ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
       this.ctx.restore();
     }
     if (alive) requestAnimationFrame(() => this.tick());
-    else { this.running = false; this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); }
+    else this.stop();
   },
-  stop() { this.running = false; if (this.ctx) this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); }
+  stop(){ this.run = false; if (this.ctx) this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height); }
 };
 
-// ==================== NETWORKING (HARDENED) ====================
+let profiles = loadProfiles();
+let selectedPlayer = profiles.lastPlayer || profiles.players[0] || '';
+let selectedOpponent = '';
+let playerProfiles = { p1: { name: 'Player 1' }, p2: { name: 'Player 2' } };
+let resultRecorded = false;
+
+function loadProfiles() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (parsed && Array.isArray(parsed.players) && parsed.matches) return parsed;
+  } catch (e) {}
+  return { players: [...DEFAULT_PLAYERS], matches: {}, lastPlayer: DEFAULT_PLAYERS[0] };
+}
+
+function saveProfiles() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(profiles));
+}
+
+function normalizeName(name) {
+  return name.trim().replace(/\s+/g, ' ').slice(0, 18);
+}
+
+function setSelectedPlayer(name) {
+  selectedPlayer = name;
+  profiles.lastPlayer = name;
+  saveProfiles();
+  renderPlayerChips();
+  renderOpponentSelect();
+  updateLobbyStats();
+  updatePlayerPrompt();
+  if (connected) sendProfile();
+}
+
+function addPlayer() {
+  const value = normalizeName($('new-player-input').value);
+  if (!value) { $('player-prompt').textContent = 'Enter a player name first.'; return; }
+  if (profiles.players.includes(value)) { $('player-prompt').textContent = 'That player already exists.'; return; }
+  profiles.players.push(value);
+  profiles.players.sort((a, b) => a.localeCompare(b));
+  saveProfiles();
+  $('new-player-input').value = '';
+  setSelectedPlayer(value);
+  $('player-prompt').textContent = 'Player added.';
+}
+
+function renderPlayerChips() {
+  const box = $('player-list');
+  box.innerHTML = '';
+  profiles.players.forEach(name => {
+    const btn = document.createElement('button');
+    btn.className = 'chip' + (name === selectedPlayer ? ' active' : '');
+    btn.textContent = name;
+    btn.onclick = () => setSelectedPlayer(name);
+    box.appendChild(btn);
+  });
+}
+
+function renderOpponentSelect() {
+  const sel = $('opponent-select');
+  const prev = selectedOpponent;
+  const others = profiles.players.filter(name => name !== selectedPlayer);
+  sel.innerHTML = '';
+  const opt = document.createElement('option');
+  opt.value = '';
+  opt.textContent = 'Choose opponent for local stats';
+  sel.appendChild(opt);
+  others.forEach(name => {
+    const item = document.createElement('option');
+    item.value = name;
+    item.textContent = name;
+    sel.appendChild(item);
+  });
+  selectedOpponent = others.includes(prev) ? prev : '';
+  sel.value = selectedOpponent;
+}
+
+function matchupKey(a, b) {
+  return [a, b].sort((x, y) => x.localeCompare(y)).join('|');
+}
+
+function getMatchupRecord(a, b) {
+  if (!a || !b || a === b) return null;
+  const key = matchupKey(a, b);
+  const record = profiles.matches[key];
+  if (!record) return { aWins: 0, bWins: 0, total: 0, pct: 0 };
+  const aWins = record[a] || 0;
+  const bWins = record[b] || 0;
+  const total = aWins + bWins;
+  return { aWins, bWins, total, pct: total ? (aWins / total) * 100 : 0 };
+}
+
+function recordMatchWin(winner, loser) {
+  if (!winner || !loser || winner === loser) return;
+  const key = matchupKey(winner, loser);
+  const record = profiles.matches[key] || {};
+  record[winner] = (record[winner] || 0) + 1;
+  record[loser] = record[loser] || 0;
+  profiles.matches[key] = record;
+  saveProfiles();
+}
+
+function matchupSummary(a, b) {
+  const stats = getMatchupRecord(a, b);
+  if (!stats) return 'Pick two different players to track the matchup.';
+  if (!stats.total) return `<strong>${a}</strong> vs <strong>${b}</strong><br>No games recorded yet.`;
+  return `<strong>${a}</strong> vs <strong>${b}</strong><br>${stats.aWins}-${stats.bWins} for ${a} (${stats.pct.toFixed(1)}%)`;
+}
+
+function updateLobbyStats(remoteName) {
+  const opponent = remoteName || selectedOpponent;
+  $('lobby-stats').innerHTML = selectedPlayer && opponent ? matchupSummary(selectedPlayer, opponent) : 'Select yourself and an opponent to preview local matchup history.';
+}
+
+function updatePlayerPrompt() {
+  $('player-prompt').textContent = selectedPlayer ? `Current player: ${selectedPlayer}` : 'Select or add a player to continue.';
+}
+
+renderPlayerChips();
+renderOpponentSelect();
+updateLobbyStats();
+updatePlayerPrompt();
+
+$('opponent-select').addEventListener('change', e => {
+  selectedOpponent = e.target.value;
+  updateLobbyStats();
+  if (connected) sendProfile();
+});
+$('add-player-btn').addEventListener('click', addPlayer);
+$('new-player-input').addEventListener('keydown', e => { if (e.key === 'Enter') addPlayer(); });
+
 let peer, conn, isHost = false, myRole = null;
 let connected = false;
 let currentCode = '';
 let reconnectAttempts = 0;
-const MAX_RECONNECT = 10;
 let reconnectTimer = null;
 let heartbeatTimer = null;
-let lastPong = 0;
 let latency = 0;
-let connQuality = 'green'; // green/yellow/red
+let lastPong = 0;
+let connQuality = 'green';
 let gameStarted = false;
-let stateSeq = 0; // state sequence number for sync
-let lastSyncedSeq = 0;
-
-// Reliable message queue — buffer messages during brief disconnects
 let msgQueue = [];
-let queueDrainTimer = null;
+let syncTimer = null;
+const MAX_RECONNECT = 10;
 
 function genCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let c = '';
-  for (let i = 0; i < 4; i++) c += chars[Math.floor(Math.random() * chars.length)];
-  return c;
+  let out = '';
+  for (let i = 0; i < 4; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  return out;
 }
 
-function setStatus(html) {
-  document.getElementById('status-msg').innerHTML = html;
+function setStatus(html) { $('status-msg').innerHTML = html; }
+
+function ensurePlayerSelected() {
+  if (selectedPlayer) return true;
+  $('player-prompt').textContent = 'Select or add a player before continuing.';
+  return false;
+}
+
+function getJoinUrl() {
+  return window.location.origin + window.location.pathname + '?join=' + currentCode;
+}
+
+function updateMyProfile() {
+  if (!myRole) return;
+  playerProfiles[myRole].name = selectedPlayer || (myRole === 'p1' ? 'Player 1' : 'Player 2');
+  updateScoreboard();
+}
+
+function sendProfile() {
+  updateMyProfile();
+  send({
+    type: 'profile',
+    role: myRole,
+    name: playerProfiles[myRole].name,
+    expectedOpponent: selectedOpponent || ''
+  });
 }
 
 function createGame() {
+  if (!ensurePlayerSelected()) return;
   AudioEngine.init();
-  const code = genCode();
-  currentCode = code;
-  isHost = true; myRole = 'p1';
-  document.getElementById('lobby-menu').style.display = 'none';
-  document.getElementById('lobby-waiting').style.display = 'block';
-  document.getElementById('room-code').textContent = code;
+  currentCode = genCode();
+  isHost = true;
+  myRole = 'p1';
+  connected = false;
+  updateMyProfile();
+  $('lobby-menu').style.display = 'none';
+  $('lobby-waiting').style.display = 'block';
+  $('room-code').textContent = currentCode;
   setStatus('Creating room...');
-  history.replaceState(null, '', '?host=' + code);
+  history.replaceState(null, '', '?host=' + currentCode);
   initPeerAsHost();
+}
+
+function joinGame() {
+  if (!ensurePlayerSelected()) return;
+  AudioEngine.init();
+  const code = $('join-input').value.toUpperCase().trim();
+  if (code.length !== 4) { setStatus('Enter a valid four-character code.'); return; }
+  currentCode = code;
+  isHost = false;
+  myRole = 'p2';
+  connected = false;
+  updateMyProfile();
+  $('lobby-menu').style.display = 'none';
+  $('lobby-waiting').style.display = 'block';
+  $('room-code').textContent = currentCode;
+  setStatus('Connecting...');
+  initPeerAsGuest();
 }
 
 function initPeerAsHost() {
   if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
   peer = new Peer('bpool2-' + currentCode, {
-    debug: 0,
-    config: {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
-        // Free TURN servers for NAT traversal
-        {
-          urls: 'turn:openrelay.metered.ca:80',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        },
-        {
-          urls: 'turn:openrelay.metered.ca:443',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        }
-      ]
-    }
+    debug:0,
+    config:{ iceServers:[
+      { urls:'stun:stun.l.google.com:19302' },
+      { urls:'stun:stun1.l.google.com:19302' },
+      { urls:'stun:stun2.l.google.com:19302' },
+      { urls:'turn:openrelay.metered.ca:80', username:'openrelayproject', credential:'openrelayproject' },
+      { urls:'turn:openrelay.metered.ca:443', username:'openrelayproject', credential:'openrelayproject' }
+    ] }
   });
   peer.on('open', () => {
-    setStatus('<span class="conn-dot conn-green"></span>Room ready — share the code!');
     reconnectAttempts = 0;
+    setStatus('<span class="conn-dot conn-green"></span>Room ready. Waiting for opponent...');
   });
-  peer.on('connection', (c) => { conn = c; setupConn(); });
-  peer.on('disconnected', () => {
-    if (!peer.destroyed) {
-      setStatus('<span class="conn-dot conn-yellow"></span>Reconnecting to server...');
-      setTimeout(() => { if (peer && !peer.destroyed) peer.reconnect(); }, 1000);
-    }
-  });
-  peer.on('error', (e) => {
-    console.warn('Peer error:', e.type, e);
+  peer.on('connection', c => { conn = c; setupConn(); });
+  peer.on('disconnected', () => { if (!peer.destroyed) setTimeout(() => peer.reconnect(), 1000); });
+  peer.on('error', e => {
     if (e.type === 'unavailable-id') {
-      setStatus('Code taken — try again.');
-      setTimeout(() => {
-        document.getElementById('lobby-menu').style.display = 'block';
-        document.getElementById('lobby-waiting').style.display = 'none';
-      }, 1500);
-    } else if (e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error') {
-      scheduleReconnect();
-    } else {
-      setStatus('Error: ' + e.type + '. Retrying...');
-      scheduleReconnect();
+      setStatus('Room code already in use.');
+      resetLobbyMenuSoon();
+      return;
     }
+    scheduleReconnect();
   });
 }
 
 function initPeerAsGuest() {
   if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
   peer = new Peer(null, {
-    debug: 0,
-    config: {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
-        {
-          urls: 'turn:openrelay.metered.ca:80',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        },
-        {
-          urls: 'turn:openrelay.metered.ca:443',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        }
-      ]
-    }
+    debug:0,
+    config:{ iceServers:[
+      { urls:'stun:stun.l.google.com:19302' },
+      { urls:'stun:stun1.l.google.com:19302' },
+      { urls:'stun:stun2.l.google.com:19302' },
+      { urls:'turn:openrelay.metered.ca:80', username:'openrelayproject', credential:'openrelayproject' },
+      { urls:'turn:openrelay.metered.ca:443', username:'openrelayproject', credential:'openrelayproject' }
+    ] }
   });
   peer.on('open', () => {
-    conn = peer.connect('bpool2-' + currentCode, { reliable: true, serialization: 'json' });
+    conn = peer.connect('bpool2-' + currentCode, { reliable:true, serialization:'json' });
     setupConn();
   });
-  peer.on('disconnected', () => {
-    if (!peer.destroyed) {
-      setTimeout(() => { if (peer && !peer.destroyed) peer.reconnect(); }, 1000);
-    }
-  });
-  peer.on('error', (e) => {
-    console.warn('Peer error:', e.type, e);
+  peer.on('disconnected', () => { if (!peer.destroyed) setTimeout(() => peer.reconnect(), 1000); });
+  peer.on('error', e => {
     if (e.type === 'peer-unavailable') {
       setStatus('Room not found. Check the code.');
-      setTimeout(() => {
-        document.getElementById('lobby-menu').style.display = 'block';
-        document.getElementById('lobby-waiting').style.display = 'none';
-      }, 2000);
-    } else {
-      scheduleReconnect();
+      resetLobbyMenuSoon();
+      return;
     }
+    scheduleReconnect();
   });
 }
 
-function joinGame() {
-  AudioEngine.init();
-  const code = document.getElementById('join-input').value.toUpperCase().trim();
-  if (code.length !== 4) return;
-  currentCode = code;
-  isHost = false; myRole = 'p2';
-  document.getElementById('lobby-menu').style.display = 'none';
-  document.getElementById('lobby-waiting').style.display = 'block';
-  document.getElementById('room-code').textContent = code;
-  setStatus('Connecting...');
-  initPeerAsGuest();
+function resetLobbyMenuSoon() {
+  setTimeout(() => {
+    $('lobby-menu').style.display = 'grid';
+    $('lobby-waiting').style.display = 'none';
+  }, 1500);
 }
 
 function setupConn() {
@@ -478,19 +658,13 @@ function setupConn() {
     connected = true;
     reconnectAttempts = 0;
     lastPong = Date.now();
-    setStatus('<span class="conn-dot conn-green"></span>Connected!');
     hideDisconnectOverlay();
-    // Drain any queued messages
-    drainQueue();
-    // Start heartbeat
+    setStatus('<span class="conn-dot conn-green"></span>Connected.');
     startHeartbeat();
-    // If reconnecting mid-game, request state sync
-    if (gameStarted && !isHost) {
-      send({ type: 'sync-request' });
-    }
-    if (!gameStarted) {
-      setTimeout(startGame, 500);
-    }
+    drainQueue();
+    sendProfile();
+    if (!gameStarted) setTimeout(startGame, 500);
+    else if (!isHost) send({ type:'sync-request' });
   });
   conn.on('data', handleMessage);
   conn.on('close', () => {
@@ -500,371 +674,332 @@ function setupConn() {
       showDisconnectOverlay();
       scheduleReconnect();
     } else {
-      setStatus('<span class="conn-dot conn-red"></span>Opponent disconnected');
+      setStatus('<span class="conn-dot conn-red"></span>Opponent disconnected.');
     }
   });
-  conn.on('error', (e) => {
-    console.warn('Conn error:', e);
-  });
+  conn.on('error', () => {});
 }
 
 function send(msg) {
   if (conn && conn.open && connected) {
-    try { conn.send(msg); return true; } catch(e) { console.warn('Send failed:', e); }
+    try { conn.send(msg); return true; } catch(e) {}
   }
-  // Queue important messages
-  if (msg.type === 'shot' || msg.type === 'break-aim' || msg.type === 'rematch' || msg.type === 'state-sync') {
+  if (['shot','break-aim','state-sync','profile','aim-start','aim-end','rematch-request','rematch-start'].includes(msg.type)) {
     msgQueue.push({ msg, time: Date.now() });
-    // Expire old messages after 10s
-    msgQueue = msgQueue.filter(m => Date.now() - m.time < 10000);
+    msgQueue = msgQueue.filter(item => Date.now() - item.time < 10000);
   }
   return false;
 }
 
 function drainQueue() {
-  if (msgQueue.length === 0) return;
-  const toSend = [...msgQueue];
+  const queued = [...msgQueue];
   msgQueue = [];
-  for (const { msg } of toSend) {
-    if (conn && conn.open) {
-      try { conn.send(msg); } catch(e) {}
-    }
-  }
+  queued.forEach(item => { try { conn.send(item.msg); } catch(e) {} });
 }
 
-// Heartbeat: ping every 2s, detect dead connections within 6s
 function startHeartbeat() {
   stopHeartbeat();
-  lastPong = Date.now();
   heartbeatTimer = setInterval(() => {
     if (conn && conn.open) {
-      try { conn.send({ type: 'ping', t: Date.now() }); } catch(e) {}
+      try { conn.send({ type:'ping', t: Date.now() }); } catch(e) {}
     }
-    // Check for timeout
     const elapsed = Date.now() - lastPong;
-    if (elapsed > 6000 && connected) {
-      connQuality = 'red';
-      updateConnStatus();
-      if (elapsed > 12000) {
-        // Connection is truly dead
-        connected = false;
-        if (gameStarted) {
-          showDisconnectOverlay();
-          scheduleReconnect();
-        }
-      }
-    } else if (elapsed > 3000) {
-      connQuality = 'yellow';
-      updateConnStatus();
-    } else {
-      connQuality = 'green';
-      updateConnStatus();
+    connQuality = elapsed > 6000 ? 'red' : elapsed > 3000 ? 'yellow' : 'green';
+    updateConnStatus();
+    if (elapsed > 12000 && connected) {
+      connected = false;
+      showDisconnectOverlay();
+      scheduleReconnect();
     }
   }, 2000);
 }
 
 function stopHeartbeat() {
-  if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+  if (heartbeatTimer) clearInterval(heartbeatTimer);
+  heartbeatTimer = null;
 }
 
 function updateConnStatus() {
-  const el = document.getElementById('conn-status');
-  if (!el) return;
-  if (!gameStarted) { el.textContent = ''; return; }
+  if (!gameStarted) { $('conn-status').textContent = ''; return; }
   const dot = `<span class="conn-dot conn-${connQuality}"></span>`;
-  if (connQuality === 'green') {
-    el.innerHTML = latency > 0 ? `${dot}${latency}ms` : `${dot}Connected`;
-  } else if (connQuality === 'yellow') {
-    el.innerHTML = `${dot}Weak`;
-  } else {
-    el.innerHTML = `${dot}Lost`;
-  }
+  $('conn-status').innerHTML = connQuality === 'green' ? `${dot}${latency || 0}ms` : connQuality === 'yellow' ? `${dot}Weak` : `${dot}Lost`;
 }
 
-// Reconnection with exponential backoff
 function scheduleReconnect() {
-  if (reconnectTimer) return;
-  if (reconnectAttempts >= MAX_RECONNECT) {
-    if (gameStarted) {
-      document.getElementById('dc-sub').textContent = 'Could not reconnect. Refresh to try again.';
-    } else {
-      setStatus('Could not connect. Refresh to try again.');
-    }
-    return;
-  }
+  if (reconnectTimer || reconnectAttempts >= MAX_RECONNECT) return;
   reconnectAttempts++;
   const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts - 1), 8000);
-  const sub = document.getElementById('dc-sub');
-  if (sub && gameStarted) sub.textContent = `Attempt ${reconnectAttempts}/${MAX_RECONNECT}...`;
-
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null;
-    attemptReconnect();
+    if (connected) return;
+    if (peer && !peer.destroyed && peer.disconnected) peer.reconnect();
+    else if (isHost) initPeerAsHost();
+    else initPeerAsGuest();
   }, delay);
 }
 
-function attemptReconnect() {
-  if (connected) return;
-  console.log('Reconnect attempt', reconnectAttempts);
+function showDisconnectOverlay() { $('dc-overlay').classList.add('show'); }
+function hideDisconnectOverlay() { $('dc-overlay').classList.remove('show'); }
 
-  // Try reconnecting existing peer first
-  if (peer && !peer.destroyed && peer.disconnected) {
-    peer.reconnect();
-    return;
-  }
-
-  // Otherwise recreate
-  if (isHost) {
-    initPeerAsHost();
-  } else {
-    initPeerAsGuest();
-  }
-}
-
-function forceReconnect() {
+$('retry-btn').onclick = () => {
   reconnectAttempts = 0;
-  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
-  attemptReconnect();
-}
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+  reconnectTimer = null;
+  if (peer && !peer.destroyed && peer.disconnected) peer.reconnect();
+  else if (isHost) initPeerAsHost();
+  else initPeerAsGuest();
+};
 
-function showDisconnectOverlay() {
-  document.getElementById('dc-overlay').classList.add('show');
-  document.getElementById('dc-sub').textContent = 'Reconnecting...';
-}
-
-function hideDisconnectOverlay() {
-  document.getElementById('dc-overlay').classList.remove('show');
-}
-
-// Host sends full state periodically and on request
-function getFullState() {
-  return {
-    type: 'state-sync',
-    seq: ++stateSeq,
-    balls: balls.map(b => ({ x: b.x, y: b.y, vx: b.vx, vy: b.vy, out: b.out })),
-    curP, phase, over, sunk,
-    brk: { p1: brk.p1, p2: brk.p2 },
-  };
-}
-
-function applyState(data) {
-  if (data.seq <= lastSyncedSeq) return; // stale
-  lastSyncedSeq = data.seq;
-
-  // Don't overwrite ball positions while it's our turn and balls aren't moving on host
-  // (prevents sync from interfering with aiming)
-  const hostMoving = data.balls.some(b => !b.out && (Math.abs(b.vx) > 0.1 || Math.abs(b.vy) > 0.1));
-  const isMyTurn = data.curP === myRole;
-
-  for (let i = 0; i < balls.length && i < data.balls.length; i++) {
-    const src = data.balls[i];
-    const b = balls[i];
-
-    // Snap velocities below threshold to zero (prevents ghost movement)
-    const svx = Math.abs(src.vx) < 0.1 ? 0 : src.vx;
-    const svy = Math.abs(src.vy) < 0.1 ? 0 : src.vy;
-
-    // Always sync out status
-    b.out = src.out;
-
-    if (isMyTurn && !hostMoving && !firing) {
-      // It's our turn and nothing is moving — only sync positions, not velocities
-      // This prevents tiny residual velocities from blocking our shot
-      const dx = src.x - b.x, dy = src.y - b.y;
-      const dist = Math.hypot(dx, dy);
-      if (dist > 30) { b.x = src.x; b.y = src.y; }
-      else if (dist > 2) { b.x += (src.x - b.x) * 0.3; b.y += (src.y - b.y) * 0.3; }
-      b.vx = 0; b.vy = 0;
-    } else {
-      // Normal sync — apply everything
-      const dx = src.x - b.x, dy = src.y - b.y;
-      const dist = Math.hypot(dx, dy);
-      if (dist > 30) { b.x = src.x; b.y = src.y; }
-      else if (dist > 1) { b.x += dx * 0.3; b.y += dy * 0.3; }
-      b.vx = svx; b.vy = svy;
-    }
-  }
-
-  curP = data.curP; phase = data.phase; over = data.over;
-  if (data.brk) { brk.p1 = data.brk.p1; brk.p2 = data.brk.p2; }
-
-  // Clear firing flag if nothing is moving after sync
-  if (!moving()) { firing = false; }
-
-  hud();
-}
-
-// Host periodic sync — only during active physics, not when idle
-let syncTimer = null;
-function startSyncLoop() {
-  if (!isHost) return;
-  if (syncTimer) clearInterval(syncTimer);
-  syncTimer = setInterval(() => {
-    if (connected && gameStarted && balls) {
-      // Only sync during active movement or right after stopping
-      if (moving()) {
-        send(getFullState());
-      }
-    }
-  }, 5000);
-}
-
-function getJoinUrl() {
-  return window.location.origin + window.location.pathname + '?join=' + currentCode;
-}
-function copyLink() {
+$('copy-btn').onclick = () => {
   navigator.clipboard.writeText(getJoinUrl()).then(() => {
-    document.getElementById('copy-btn').textContent = '✅ Copied!';
-    setTimeout(() => { document.getElementById('copy-btn').textContent = '📋 Copy Link'; }, 2000);
-  });
-}
-function shareLink() {
-  if (navigator.share) {
-    navigator.share({ title: 'Bumper Pool', text: 'Join my Bumper Pool game!', url: getJoinUrl() });
-  } else copyLink();
-}
+    $('copy-btn').textContent = 'Copied';
+    setTimeout(() => { $('copy-btn').textContent = 'Copy Link'; }, 1600);
+  }).catch(() => {});
+};
 
-// ==================== GAME CONSTANTS ====================
-const Cv = document.getElementById('c');
-const Xx = Cv.getContext('2d');
+$('share-btn').onclick = () => {
+  if (navigator.share) navigator.share({ title:'Bumper Pool', text:'Join my Bumper Pool game', url:getJoinUrl() }).catch(() => {});
+  else $('copy-btn').click();
+};
 
-const W = 420, H = 700, RAIL = 32;
+$('create-btn').onclick = createGame;
+$('join-btn').onclick = joinGame;
+
+const W = 420;
+const H = 560;
+const RAIL = 34;
 const IL = RAIL, IR = W - RAIL, IT = RAIL, IB = H - RAIL;
 const CX = W / 2, CY = H / 2;
-const BR = 11, BPR = 13, PR = 16, PSINK = 18;
-const FRICTION = 0.984;
+const BR = 11, BPR = 12, PR = 18, PSINK = 17;
+const FRICTION = .984;
+const TURN_GLOW = { p1: 'turn-red', p2: 'turn-white', break: 'break-mode' };
 
 let sc = 1;
 let feltPattern = null;
-
-function generateFelt() {
-  const fc = document.createElement('canvas');
-  fc.width = 200; fc.height = 200;
-  const fx = fc.getContext('2d');
-  fx.fillStyle = '#1e6b3f';
-  fx.fillRect(0, 0, 200, 200);
-  const id = fx.getImageData(0, 0, 200, 200);
-  for (let i = 0; i < id.data.length; i += 4) {
-    const n = (Math.random() - 0.5) * 18;
-    id.data[i] += n; id.data[i + 1] += n; id.data[i + 2] += n;
-  }
-  fx.putImageData(id, 0, 0);
-  feltPattern = Xx.createPattern(fc, 'repeat');
-}
-
-function resize() {
-  const mw = Math.min(window.innerWidth - 16, W);
-  const mh = window.innerHeight - 160;
-  sc = Math.min(mw / W, mh / H, 1.2);
-  Cv.width = W * sc; Cv.height = H * sc;
-  Cv.style.width = (W * sc) + 'px';
-  Cv.style.height = (H * sc) + 'px';
-  Xx.setTransform(sc, 0, 0, sc, 0, 0);
-  generateFelt();
-}
-resize();
-window.addEventListener('resize', () => { resize(); draw(); });
+let balls = [];
+let curP = 'p1';
+let over = false;
+let phase = 'break';
+let brk = { p1:false, p2:false };
+let breakShots = { p1:null, p2:null };
+let breakStatus = { p1:{ rightRail:false }, p2:{ rightRail:false } };
+let breakShooting = false;
+let sel = null;
+let aim = null;
+let firing = false;
+let sunkThisTurn = false;
+let pocketBursts = [];
+let opponentAim = { active:false, ballIdx:-1 };
+let af = 0;
+let stateSeq = 0;
+let lastSyncedSeq = 0;
+let rematch = { mine:false, opp:false, startedAt:0 };
 
 const POCKETS = [
-  { x: CX, y: IT, forPlayer: 'p1' },
-  { x: CX, y: IB, forPlayer: 'p2' },
+  { x: CX, y: IT, targetFor:'p1', homeFor:'p2' },
+  { x: CX, y: IB, targetFor:'p2', homeFor:'p1' }
 ];
 
 const BUMPERS = [
-  { x: CX - 36, y: IT + 4 }, { x: CX + 36, y: IT + 4 },
-  { x: CX - 36, y: IB - 4 }, { x: CX + 36, y: IB - 4 },
-  { x: CX - 22, y: CY - 72 }, { x: CX + 22, y: CY - 72 },
-  { x: CX - 44, y: CY - 36 }, { x: CX, y: CY - 36 }, { x: CX + 44, y: CY - 36 },
-  { x: CX - 44, y: CY + 36 }, { x: CX, y: CY + 36 }, { x: CX + 44, y: CY + 36 },
-  { x: CX - 22, y: CY + 72 }, { x: CX + 22, y: CY + 72 },
+  { x: CX - 28, y: IT + 18 }, { x: CX + 28, y: IT + 18 },
+  { x: CX - 28, y: IB - 18 }, { x: CX + 28, y: IB - 18 },
+  { x: CX, y: CY - 72 }, { x: CX, y: CY - 36 },
+  { x: CX, y: CY + 36 }, { x: CX, y: CY + 72 },
+  { x: CX - 72, y: CY }, { x: CX - 36, y: CY },
+  { x: CX + 36, y: CY }, { x: CX + 72, y: CY }
 ];
 
-// ==================== GAME STATE ====================
-let balls, curP, over, phase, brk, breakShooting, sel, aim, firing, sunk, af;
-let breakShots = { p1: null, p2: null };
-let trails = [];
+function generateFelt() {
+  const off = document.createElement('canvas');
+  off.width = 240; off.height = 240;
+  const ctx = off.getContext('2d');
+  ctx.fillStyle = '#245d3d';
+  ctx.fillRect(0, 0, off.width, off.height);
+  const id = ctx.getImageData(0, 0, off.width, off.height);
+  for (let i = 0; i < id.data.length; i += 4) {
+    const n = (Math.random() - .5) * 22;
+    id.data[i] += n * .35;
+    id.data[i + 1] += n;
+    id.data[i + 2] += n * .25;
+  }
+  ctx.putImageData(id, 0, 0);
+  ctx.strokeStyle = 'rgba(255,255,255,.022)';
+  for (let y = 0; y < off.height; y += 6) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(off.width, y + Math.sin(y * .2) * 2); ctx.stroke();
+  }
+  feltPattern = Xx.createPattern(off, 'repeat');
+}
+
+function resize() {
+  const availW = Math.min(window.innerWidth - 20, 860);
+  const availH = window.innerHeight - 210;
+  sc = Math.min(availW / W, availH / H);
+  sc = Math.max(.82, Math.min(sc, 1.95));
+  Cv.width = Math.round(W * sc);
+  Cv.height = Math.round(H * sc);
+  Cv.style.width = `${W * sc}px`;
+  Cv.style.height = `${H * sc}px`;
+  Xx.setTransform(sc, 0, 0, sc, 0, 0);
+  generateFelt();
+  draw();
+}
+window.addEventListener('resize', resize);
 
 function mk(x, y, col, pl, m) {
-  return { x, y, vx: 0, vy: 0, col, pl, m, out: false, lastX: x, lastY: y };
+  return {
+    x,y,vx:0,vy:0,col,pl,m,out:false,
+    spin:0,lastX:x,lastY:y,pocket:null,scale:1,alpha:1
+  };
+}
+
+function rackBalls() {
+  const topY = IT + 64;
+  const bottomY = IB - 64;
+  return [
+    mk(CX, bottomY, '#c92b2b', 'p1', true),
+    mk(CX - 34, bottomY - 14, '#b81f1f', 'p1', false),
+    mk(CX - 68, bottomY - 36, '#b81f1f', 'p1', false),
+    mk(CX + 34, bottomY - 14, '#b81f1f', 'p1', false),
+    mk(CX + 68, bottomY - 36, '#b81f1f', 'p1', false),
+    mk(CX, topY, '#eceef2', 'p2', true),
+    mk(CX - 34, topY + 14, '#dadfe7', 'p2', false),
+    mk(CX - 68, topY + 36, '#dadfe7', 'p2', false),
+    mk(CX + 34, topY + 14, '#dadfe7', 'p2', false),
+    mk(CX + 68, topY + 36, '#dadfe7', 'p2', false)
+  ];
 }
 
 function startGame() {
-  document.getElementById('lobby').style.display = 'none';
-  const g = document.getElementById('game');
-  g.style.display = 'flex'; g.style.flexDirection = 'column'; g.style.alignItems = 'center';
-  document.getElementById('you-are').textContent =
-    myRole === 'p1' ? 'You are: PLAYER 1 🔴' : 'You are: PLAYER 2 ⚪';
-  gameStarted = true;
+  $('lobby').style.display = 'none';
+  $('game').style.display = 'flex';
   Confetti.init();
+  gameStarted = true;
   initGameState();
   startSyncLoop();
+  resize();
 }
 
 function initGameState() {
-  document.getElementById('ov').classList.remove('show');
+  over = false;
+  phase = 'break';
+  curP = 'p1';
+  brk = { p1:false, p2:false };
+  breakShots = { p1:null, p2:null };
+  breakStatus = { p1:{ rightRail:false }, p2:{ rightRail:false } };
+  breakShooting = false;
+  sel = null;
+  aim = null;
+  firing = false;
+  sunkThisTurn = false;
+  balls = rackBalls();
+  pocketBursts = [];
+  opponentAim = { active:false, ballIdx:-1 };
+  rematch = { mine:false, opp:false, startedAt:0 };
+  resultRecorded = false;
+  stateSeq = 0;
+  lastSyncedSeq = 0;
+  $('ov').classList.remove('show');
+  $('rb').disabled = false;
+  $('rb').textContent = 'Play Again';
+  $('rematch-status').textContent = '';
   Confetti.stop();
-  over = false; phase = 'break'; brk = { p1: false, p2: false };
-  breakShooting = false; curP = 'p1'; sel = null; aim = null; firing = false; sunk = false;
-  breakShots = { p1: null, p2: null }; trails = [];
-  stateSeq = 0; lastSyncedSeq = 0;
-
-  const bpY = IB, tpY = IT;
-  balls = [
-    mk(CX, bpY - 32, '#cc2222', 'p1', true),
-    mk(CX - 50, bpY - 42, '#bb1111', 'p1', false),
-    mk(CX - 92, bpY - 54, '#bb1111', 'p1', false),
-    mk(CX + 50, bpY - 42, '#bb1111', 'p1', false),
-    mk(CX + 92, bpY - 54, '#bb1111', 'p1', false),
-    mk(CX, tpY + 32, '#dddddd', 'p2', true),
-    mk(CX - 50, tpY + 42, '#cccccc', 'p2', false),
-    mk(CX - 92, tpY + 54, '#cccccc', 'p2', false),
-    mk(CX + 50, tpY + 42, '#cccccc', 'p2', false),
-    mk(CX + 92, tpY + 54, '#cccccc', 'p2', false),
-  ];
-  hud();
+  updateScoreboard();
+  updateTurnUI();
   if (af) cancelAnimationFrame(af);
   loop();
 }
 
-function requestRematch() {
-  send({ type: 'rematch' });
-  initGameState();
+function startSyncLoop() {
+  if (!isHost) return;
+  if (syncTimer) clearInterval(syncTimer);
+  syncTimer = setInterval(() => {
+    if (connected && gameStarted && moving()) send(getFullState());
+  }, 4000);
 }
 
-// ==================== HUD ====================
-function hud() {
-  const jBalls = balls.filter(b => b.pl === 'p1');
-  const mBalls = balls.filter(b => b.pl === 'p2');
-  document.getElementById('jd').innerHTML = jBalls.map(b =>
-    `<span class="ball-icon red-ball${b.out ? ' sunk' : ''}"></span>`
-  ).join('');
-  document.getElementById('md').innerHTML = mBalls.map(b =>
-    `<span class="ball-icon white-ball${b.out ? ' sunk' : ''}"></span>`
-  ).join('');
+function getFullState() {
+  return {
+    type:'state-sync',
+    seq: ++stateSeq,
+    balls: balls.map(b => ({
+      x:b.x,y:b.y,vx:b.vx,vy:b.vy,out:b.out,spin:b.spin,pocket:b.pocket,scale:b.scale,alpha:b.alpha
+    })),
+    curP, phase, over, sunkThisTurn,
+    brk, breakStatus
+  };
+}
+
+function applyState(data) {
+  if (data.seq <= lastSyncedSeq) return;
+  lastSyncedSeq = data.seq;
+  balls.forEach((b, i) => {
+    const src = data.balls[i];
+    if (!src) return;
+    b.out = src.out;
+    b.x = Math.abs(src.x - b.x) > 20 ? src.x : b.x + (src.x - b.x) * .28;
+    b.y = Math.abs(src.y - b.y) > 20 ? src.y : b.y + (src.y - b.y) * .28;
+    b.vx = Math.abs(src.vx) < .04 ? 0 : src.vx;
+    b.vy = Math.abs(src.vy) < .04 ? 0 : src.vy;
+    b.spin = src.spin || 0;
+    b.pocket = src.pocket || null;
+    b.scale = src.scale == null ? 1 : src.scale;
+    b.alpha = src.alpha == null ? 1 : src.alpha;
+  });
+  curP = data.curP;
+  phase = data.phase;
+  over = data.over;
+  sunkThisTurn = data.sunkThisTurn;
+  brk = data.brk || brk;
+  breakStatus = data.breakStatus || breakStatus;
+  updateTurnUI();
+}
+
+function roleName(role) {
+  return playerProfiles[role]?.name || (role === 'p1' ? 'Player 1' : 'Player 2');
+}
+
+function updateScoreboard() {
+  $('p1-name').textContent = roleName('p1');
+  $('p2-name').textContent = roleName('p2');
+  $('p1-balls').innerHTML = balls.filter(b => b.pl === 'p1').map(b => `<span class="ball-icon red-ball${b.out ? ' sunk' : ''}"></span>`).join('');
+  $('p2-balls').innerHTML = balls.filter(b => b.pl === 'p2').map(b => `<span class="ball-icon white-ball${b.out ? ' sunk' : ''}"></span>`).join('');
+  const p1 = roleName('p1');
+  const p2 = roleName('p2');
+  $('matchup-live').textContent = p1 && p2 && p1 !== p2 ? matchupSummaryText(p1, p2) : '';
+}
+
+function matchupSummaryText(a, b) {
+  const stats = getMatchupRecord(a, b);
+  if (!stats || !stats.total) return `${a} vs ${b}: no games recorded`;
+  return `${a} vs ${b}: ${stats.aWins}-${stats.bWins}`;
+}
+
+function updateTurnUI() {
+  const shell = $('table-shell');
+  shell.classList.remove('turn-red', 'turn-white', 'break-mode');
+  if (phase === 'break') shell.classList.add(TURN_GLOW.break);
+  else shell.classList.add(TURN_GLOW[curP]);
+
+  $('p1-pane').className = 'score-pane' + (phase !== 'break' && curP === 'p1' ? ' active-red' : '');
+  $('p2-pane').className = 'score-pane' + (phase !== 'break' && curP === 'p2' ? ' active-white' : '');
 
   if (over) return;
-  const ti = document.getElementById('ti');
-  const pm = document.getElementById('pm');
   if (phase === 'break') {
-    if (breakShooting) { ti.textContent = 'BREAK!'; pm.textContent = ''; }
-    else {
-      const myAimed = brk[myRole];
-      const oppRole = myRole === 'p1' ? 'p2' : 'p1';
-      const oppAimed = brk[oppRole];
-      if (!myAimed) { ti.textContent = 'BREAK'; pm.textContent = 'Aim your marked ball!'; }
-      else if (!oppAimed) { ti.textContent = 'BREAK'; pm.textContent = 'Waiting for opponent...'; }
-      else { ti.textContent = 'BREAK!'; pm.textContent = ''; }
-    }
+    $('turn-label').textContent = brk[myRole] ? 'Waiting On Break' : 'Simultaneous Break';
+    const rightRail = myRole === 'p1' ? 'right rail' : 'left rail';
+    $('phase-label').textContent = breakShooting ? 'Balls in motion...' : `Pocket your marked ball after banking off the ${rightRail}.`;
+  } else if (curP === myRole) {
+    const mustMarked = markedBallFor(myRole) && !markedBallFor(myRole).out;
+    $('turn-label').textContent = 'Your Shot';
+    $('phase-label').textContent = mustMarked ? 'Marked ball must score first.' : 'Shoot any of your remaining balls.';
   } else {
-    ti.textContent = curP === 'p1' ? "Player 1's Turn 🔴" : "Player 2's Turn ⚪";
-    if (curP === myRole) {
-      const mb = balls.find(b => b.pl === curP && b.m);
-      pm.textContent = (mb && !mb.out) ? 'Must pocket marked ball first' : 'Your shot!';
-    } else {
-      pm.textContent = 'Waiting...';
-    }
+    $('turn-label').textContent = 'Waiting...';
+    $('phase-label').textContent = `Watching ${roleName(curP)} line up the next shot.`;
   }
+  updateConnStatus();
 }
+
+function markedBallFor(role) { return balls.find(b => b.pl === role && b.m); }
 
 function canIShoot() {
   if (over || moving() || firing) return false;
@@ -873,265 +1008,300 @@ function canIShoot() {
 }
 
 function moving() {
-  return balls.some(b => !b.out && (Math.abs(b.vx) > 0.04 || Math.abs(b.vy) > 0.04));
+  return balls.some(b => !b.out && (b.pocket || Math.abs(b.vx) > .04 || Math.abs(b.vy) > .04));
 }
 
-// ==================== MULTIPLAYER MESSAGES ====================
 function handleMessage(data) {
   if (!data || !data.type) return;
-
   switch (data.type) {
     case 'ping':
-      if (conn && conn.open) {
-        try { conn.send({ type: 'pong', t: data.t }); } catch(e) {}
-      }
+      if (conn && conn.open) try { conn.send({ type:'pong', t:data.t }); } catch(e) {}
       break;
-
     case 'pong':
       lastPong = Date.now();
       latency = Math.round((Date.now() - data.t) / 2);
-      connQuality = latency < 100 ? 'green' : latency < 250 ? 'yellow' : 'red';
+      connQuality = latency < 120 ? 'green' : latency < 260 ? 'yellow' : 'red';
       updateConnStatus();
       break;
-
+    case 'profile':
+      playerProfiles[data.role] = { name: data.name || (data.role === 'p1' ? 'Player 1' : 'Player 2') };
+      updateScoreboard();
+      updateLobbyStats(data.role === myRole ? selectedOpponent : data.name);
+      break;
     case 'shot': {
       const b = balls[data.ballIdx];
-      if (b) { b.vx = data.vx; b.vy = data.vy; firing = true; sunk = false; }
-      AudioEngine.strike(Math.hypot(data.vx, data.vy) / 16);
+      if (b) {
+        b.vx = data.vx;
+        b.vy = data.vy;
+        firing = true;
+        sunkThisTurn = false;
+        AudioEngine.strike(Math.min(1, Math.hypot(data.vx, data.vy) / 16));
+      }
+      opponentAim = { active:false, ballIdx:-1 };
       break;
     }
-
-    case 'break-aim': {
-      const opp = myRole === 'p1' ? 'p2' : 'p1';
-      brk[opp] = true;
-      breakShots[opp] = { ballIdx: data.ballIdx, vx: data.vx, vy: data.vy };
-      hud();
+    case 'break-aim':
+      brk[data.role] = true;
+      breakShots[data.role] = { ballIdx:data.ballIdx, vx:data.vx, vy:data.vy };
+      updateTurnUI();
       if (brk.p1 && brk.p2) launchBreak();
       break;
-    }
-
-    case 'rematch':
+    case 'aim-start':
+      if (data.role !== myRole) opponentAim = { active:true, ballIdx:data.ballIdx };
+      break;
+    case 'aim-end':
+      if (data.role !== myRole) opponentAim = { active:false, ballIdx:-1 };
+      break;
+    case 'rematch-request':
+      rematch.opp = true;
+      updateRematchStatus();
+      if (isHost && rematch.mine) triggerRematchStart();
+      break;
+    case 'rematch-start':
       initGameState();
       break;
-
     case 'sync-request':
-      // Only host responds
-      if (isHost && balls) {
-        send(getFullState());
-      }
+      if (isHost) send(getFullState());
       break;
-
     case 'state-sync':
-      // Only guest applies
-      if (!isHost) {
-        applyState(data);
-      }
+      if (!isHost) applyState(data);
       break;
   }
 }
 
 function launchBreak() {
-  if (breakShots.p1) {
-    const b = balls[breakShots.p1.ballIdx];
-    if (b) { b.vx = breakShots.p1.vx; b.vy = breakShots.p1.vy; }
-  }
-  if (breakShots.p2) {
-    const b = balls[breakShots.p2.ballIdx];
-    if (b) { b.vx = breakShots.p2.vx; b.vy = breakShots.p2.vy; }
-  }
-  breakShooting = true; firing = true; sunk = false;
-  AudioEngine.strike(0.8);
-  hud();
+  ['p1', 'p2'].forEach(role => {
+    const shot = breakShots[role];
+    if (!shot) return;
+    const b = balls[shot.ballIdx];
+    if (!b) return;
+    b.vx = shot.vx;
+    b.vy = shot.vy;
+  });
+  breakShooting = true;
+  firing = true;
+  sunkThisTurn = false;
+  updateTurnUI();
+}
+
+function rightRailFor(role) {
+  return role === 'p1' ? 'right' : 'left';
+}
+
+function targetPocketFor(role) {
+  return POCKETS.find(p => p.targetFor === role);
 }
 
 function stopped() {
-  chkWin(); if (over) return;
+  checkWin();
+  if (over) return;
   if (phase === 'break') {
-    breakShooting = false; phase = 'play';
-    const jm = balls.find(b => b.pl === 'p1' && b.m);
-    const mm = balls.find(b => b.pl === 'p2' && b.m);
-    const jT = POCKETS.find(p => p.forPlayer === 'p1');
-    const mT = POCKETS.find(p => p.forPlayer === 'p2');
-    const jD = jm.out ? 0 : Math.hypot(jm.x - jT.x, jm.y - jT.y);
-    const mD = mm.out ? 0 : Math.hypot(mm.x - mT.x, mm.y - mT.y);
-    curP = jD <= mD ? 'p1' : 'p2';
-  } else {
-    if (!sunk) curP = curP === 'p1' ? 'p2' : 'p1';
+    breakShooting = false;
+    phase = 'play';
+    const ranked = ['p1', 'p2'].map(role => {
+      const marked = markedBallFor(role);
+      const target = targetPocketFor(role);
+      const banked = breakStatus[role].rightRail;
+      const dist = marked.out ? 0 : Math.hypot(marked.x - target.x, marked.y - target.y);
+      return {
+        role,
+        valid: banked,
+        dist: marked.out && banked ? -1 : banked ? dist : 99999
+      };
+    }).sort((a, b) => a.dist - b.dist);
+    curP = ranked[0].role;
+  } else if (!sunkThisTurn) {
+    curP = curP === 'p1' ? 'p2' : 'p1';
   }
-  sunk = false; sel = null; aim = null; hud();
-  // Host sends authoritative state after each turn — send twice for reliability
-  if (isHost) {
+  sunkThisTurn = false;
+  sel = null;
+  aim = null;
+  firing = false;
+  opponentAim = { active:false, ballIdx:-1 };
+  updateScoreboard();
+  updateTurnUI();
+  if (isHost && connected) {
     const state = getFullState();
     send(state);
-    // Second send after short delay to ensure guest receives clean state
-    setTimeout(() => { if (connected) send(getFullState()); }, 200);
+    setTimeout(() => { if (connected) send(getFullState()); }, 220);
   }
 }
 
-function chkWin() {
+function checkWin() {
   const p1done = balls.filter(b => b.pl === 'p1' && !b.out).length === 0;
   const p2done = balls.filter(b => b.pl === 'p2' && !b.out).length === 0;
-  if (p1done || p2done) {
-    over = true;
-    const winner = p1done ? 'p1' : 'p2';
-    document.getElementById('wt').textContent = winner === 'p1' ? 'PLAYER 1 WINS! 🔴' : 'PLAYER 2 WINS! ⚪';
-    document.getElementById('ov').classList.add('show');
-    AudioEngine.win();
-    Confetti.launch(winner === 'p1' ? 'red' : 'white');
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
-    hud();
+  if (!p1done && !p2done) return;
+  over = true;
+  const winnerRole = p1done ? 'p1' : 'p2';
+  const loserRole = winnerRole === 'p1' ? 'p2' : 'p1';
+  const winnerName = roleName(winnerRole);
+  const loserName = roleName(loserRole);
+  if (!resultRecorded) {
+    recordMatchWin(winnerName, loserName);
+    resultRecorded = true;
   }
+  $('wt').textContent = `${winnerName} Wins`;
+  $('win-stats').innerHTML = matchupSummary(winnerName, loserName);
+  $('ov').classList.add('show');
+  $('rematch-status').textContent = '';
+  $('rb').textContent = 'Play Again';
+  $('rb').disabled = false;
+  AudioEngine.win();
+  Confetti.launch(winnerRole === 'p1' ? 'red' : 'white');
+  if (navigator.vibrate) navigator.vibrate([120, 60, 160]);
+  updateScoreboard();
 }
 
-// ==================== PHYSICS ====================
+function startSink(b, pocket) {
+  b.pocket = { x:pocket.x, y:pocket.y, t:0 };
+  pocketBursts.push({ x:pocket.x, y:pocket.y, life:1, hue:b.pl === 'p1' ? 'rgba(234,98,98,' : 'rgba(255,255,255,' });
+  AudioEngine.pocket();
+  sunkThisTurn = true;
+}
+
 function phys() {
   if (!moving()) return;
-  for (let b of balls) {
+  for (const b of balls) {
     if (b.out) continue;
-    b.lastX = b.x; b.lastY = b.y;
-    b.x += b.vx; b.y += b.vy;
-    b.vx *= FRICTION; b.vy *= FRICTION;
-    if (Math.abs(b.vx) < 0.04) b.vx = 0;
-    if (Math.abs(b.vy) < 0.04) b.vy = 0;
-
-    const spd = Math.hypot(b.vx, b.vy);
-    if (spd > 2) {
-      trails.push({ x: b.x, y: b.y, col: b.pl === 'p1' ? 'rgba(200,60,60,' : 'rgba(200,200,200,', life: 1 });
+    if (b.pocket) {
+      b.pocket.t += 1 / 60;
+      const p = Math.min(1, b.pocket.t / .3);
+      b.x += (b.pocket.x - b.x) * .24;
+      b.y += (b.pocket.y - b.y) * .24 + p * .15;
+      b.scale = 1 - p * .7;
+      b.alpha = 1 - p;
+      if (p >= 1) {
+        b.out = true;
+        b.pocket = null;
+        b.vx = 0;
+        b.vy = 0;
+        b.scale = 1;
+        b.alpha = 1;
+      }
+      continue;
     }
 
-    // Rail collisions
-    if (b.y - BR < IT && Math.abs(b.x - CX) > PR + 6) {
+    b.lastX = b.x;
+    b.lastY = b.y;
+    b.x += b.vx;
+    b.y += b.vy;
+    b.vx *= FRICTION;
+    b.vy *= FRICTION;
+    if (Math.abs(b.vx) < .04) b.vx = 0;
+    if (Math.abs(b.vy) < .04) b.vy = 0;
+    const speed = Math.hypot(b.vx, b.vy);
+    b.spin += speed * .05;
+
+    if (b.y - BR < IT && Math.abs(b.x - CX) > PR + 10) {
       AudioEngine.railHit(Math.abs(b.vy));
-      b.y = IT + BR; b.vy = Math.abs(b.vy) * 0.8;
+      b.y = IT + BR;
+      b.vy = Math.abs(b.vy) * .82;
     }
-    if (b.y + BR > IB && Math.abs(b.x - CX) > PR + 6) {
+    if (b.y + BR > IB && Math.abs(b.x - CX) > PR + 10) {
       AudioEngine.railHit(Math.abs(b.vy));
-      b.y = IB - BR; b.vy = -Math.abs(b.vy) * 0.8;
+      b.y = IB - BR;
+      b.vy = -Math.abs(b.vy) * .82;
     }
     if (b.x - BR < IL) {
       AudioEngine.railHit(Math.abs(b.vx));
-      b.x = IL + BR; b.vx = Math.abs(b.vx) * 0.8;
+      b.x = IL + BR;
+      b.vx = Math.abs(b.vx) * .82;
+      if (phase === 'break' && b.m && b.pl === 'p2') breakStatus.p2.rightRail = true;
     }
     if (b.x + BR > IR) {
       AudioEngine.railHit(Math.abs(b.vx));
-      b.x = IR - BR; b.vx = -Math.abs(b.vx) * 0.8;
+      b.x = IR - BR;
+      b.vx = -Math.abs(b.vx) * .82;
+      if (phase === 'break' && b.m && b.pl === 'p1') breakStatus.p1.rightRail = true;
     }
 
-    // Bumpers
-    for (let bp of BUMPERS) {
-      const dx = b.x - bp.x, dy = b.y - bp.y, d = Math.hypot(dx, dy), mn = BR + BPR;
-      if (d < mn && d > 0.01) {
-        const nx = dx / d, ny = dy / d, dot = b.vx * nx + b.vy * ny;
+    for (const bumper of BUMPERS) {
+      const dx = b.x - bumper.x;
+      const dy = b.y - bumper.y;
+      const dist = Math.hypot(dx, dy);
+      const min = BR + BPR;
+      if (dist < min && dist > .001) {
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const dot = b.vx * nx + b.vy * ny;
         if (dot < 0) {
           AudioEngine.bumperHit(Math.abs(dot));
-          b.vx -= 2.05 * dot * nx; b.vy -= 2.05 * dot * ny;
+          b.vx -= 2.05 * dot * nx;
+          b.vy -= 2.05 * dot * ny;
         }
-        b.x = bp.x + nx * (mn + 0.5); b.y = bp.y + ny * (mn + 0.5);
+        b.x = bumper.x + nx * (min + .3);
+        b.y = bumper.y + ny * (min + .3);
       }
     }
 
-    // Pockets
-    for (let p of POCKETS) {
-      if (Math.hypot(b.x - p.x, b.y - p.y) < PSINK) {
-        if (p.forPlayer === b.pl) {
-          const mb = balls.find(mm => mm.pl === b.pl && mm.m);
-          if (mb && !mb.out && b !== mb) { bounce(b, p); }
-          else { b.out = true; b.vx = 0; b.vy = 0; sunk = true; AudioEngine.pocket(); }
-        } else { bounce(b, p); }
+    for (const pocket of POCKETS) {
+      if (Math.hypot(b.x - pocket.x, b.y - pocket.y) < PSINK) {
+        if (pocket.targetFor !== b.pl) {
+          bounceFromPocket(b, pocket);
+          continue;
+        }
+        const marked = markedBallFor(b.pl);
+        if (marked && !marked.out && b !== marked) {
+          bounceFromPocket(b, pocket);
+          continue;
+        }
+        if (phase === 'break' && b.m && !breakStatus[b.pl].rightRail) {
+          bounceFromPocket(b, pocket);
+          continue;
+        }
+        startSink(b, pocket);
       }
     }
   }
 
-  // Ball-ball
   for (let i = 0; i < balls.length; i++) {
     for (let j = i + 1; j < balls.length; j++) {
       const a = balls[i], b = balls[j];
-      if (a.out || b.out) continue;
-      const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
-      if (d < BR * 2 && d > 0.01) {
-        const nx = dx / d, ny = dy / d;
-        const imp = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
-        if (imp > 0) {
-          a.vx -= imp * nx; a.vy -= imp * ny;
-          b.vx += imp * nx; b.vy += imp * ny;
-          AudioEngine.ballHit(imp);
+      if (a.out || b.out || a.pocket || b.pocket) continue;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < BR * 2 && dist > .001) {
+        const nx = dx / dist, ny = dy / dist;
+        const impact = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
+        if (impact > 0) {
+          a.vx -= impact * nx; a.vy -= impact * ny;
+          b.vx += impact * nx; b.vy += impact * ny;
+          AudioEngine.ballHit(impact);
         }
-        const ov = BR * 2 - d;
-        a.x -= nx * ov / 2; a.y -= ny * ov / 2;
-        b.x += nx * ov / 2; b.y += ny * ov / 2;
+        const overlap = BR * 2 - dist;
+        a.x -= nx * overlap / 2; a.y -= ny * overlap / 2;
+        b.x += nx * overlap / 2; b.y += ny * overlap / 2;
       }
     }
   }
 
-  for (let b of balls) {
-    if (b.out) continue;
-    b.x = Math.max(IL + BR, Math.min(IR - BR, b.x));
-    b.y = Math.max(IT + BR, Math.min(IB - BR, b.y));
-  }
+  pocketBursts = pocketBursts.filter(b => (b.life -= .07) > 0);
 }
 
-function bounce(b, p) {
-  const dx = b.x - p.x, dy = b.y - p.y, d = Math.hypot(dx, dy) || 1;
-  b.vx = (dx / d) * 5; b.vy = (dy / d) * 5;
-  b.x = p.x + (dx / d) * (PSINK + BR + 4); b.y = p.y + (dy / d) * (PSINK + BR + 4);
+function bounceFromPocket(b, pocket) {
+  const dx = b.x - pocket.x;
+  const dy = b.y - pocket.y;
+  const dist = Math.hypot(dx, dy) || 1;
+  b.vx = (dx / dist) * 4.8;
+  b.vy = (dy / dist) * 4.8;
+  b.x = pocket.x + (dx / dist) * (PSINK + BR + 4);
+  b.y = pocket.y + (dy / dist) * (PSINK + BR + 4);
   AudioEngine.railHit(3);
 }
 
-// ==================== DRAWING ====================
-function drawTable() {
-  const woodGrad = Xx.createLinearGradient(0, 0, W, 0);
-  woodGrad.addColorStop(0, '#5c3317');
-  woodGrad.addColorStop(0.15, '#8b5a2b');
-  woodGrad.addColorStop(0.3, '#6b3a1f');
-  woodGrad.addColorStop(0.5, '#9b6b3a');
-  woodGrad.addColorStop(0.7, '#7b4a2a');
-  woodGrad.addColorStop(0.85, '#8b5a2b');
-  woodGrad.addColorStop(1, '#5c3317');
-  Xx.fillStyle = woodGrad;
-  Xx.beginPath(); Xx.roundRect(0, 0, W, H, 12); Xx.fill();
-
-  // Wood grain
-  Xx.save(); Xx.globalAlpha = 0.08;
-  for (let i = 0; i < 40; i++) {
-    const y = i * (H / 40) + Math.sin(i * 0.8) * 3;
-    Xx.strokeStyle = i % 3 === 0 ? '#3a1a08' : '#a87040';
-    Xx.lineWidth = 0.5 + Math.random() * 0.5;
-    Xx.beginPath(); Xx.moveTo(0, y); Xx.lineTo(W, y); Xx.stroke();
-  }
-  Xx.restore();
-
-  // Rail edge
-  Xx.strokeStyle = '#3a2010'; Xx.lineWidth = 3;
-  Xx.strokeRect(IL - 2, IT - 2, IR - IL + 4, IB - IT + 4);
-  Xx.strokeStyle = '#a07040'; Xx.lineWidth = 1;
-  Xx.strokeRect(IL - 0.5, IT - 0.5, IR - IL + 1, IB - IT + 1);
-
-  // Diamond sights
-  Xx.fillStyle = '#c9a84c';
-  [0.25, 0.5, 0.75].forEach(t => {
-    drawDiamond(IL / 2, IT + (IB - IT) * t, 3);
-    drawDiamond(IR + (W - IR) / 2, IT + (IB - IT) * t, 3);
-  });
-  [0.2, 0.4, 0.6, 0.8].forEach(t => {
-    drawDiamond(IL + (IR - IL) * t, IT / 2, 3);
-    drawDiamond(IL + (IR - IL) * t, IB + (H - IB) / 2, 3);
-  });
-
-  // Felt
-  if (feltPattern) { Xx.fillStyle = feltPattern; Xx.fillRect(IL, IT, IR - IL, IB - IT); }
-
-  // Lighting
-  const lightGrad = Xx.createRadialGradient(CX, CY, 40, CX, CY, 380);
-  lightGrad.addColorStop(0, 'rgba(80,180,100,0.08)');
-  lightGrad.addColorStop(0.5, 'rgba(0,0,0,0)');
-  lightGrad.addColorStop(1, 'rgba(0,0,0,0.25)');
-  Xx.fillStyle = lightGrad; Xx.fillRect(IL, IT, IR - IL, IB - IT);
-
-  // Center line
-  Xx.save(); Xx.globalAlpha = 0.06; Xx.strokeStyle = '#fff'; Xx.lineWidth = 1;
-  Xx.setLineDash([8, 8]);
-  Xx.beginPath(); Xx.moveTo(IL + 20, CY); Xx.lineTo(IR - 20, CY); Xx.stroke();
-  Xx.setLineDash([]); Xx.restore();
+function roundedRect(x, y, w, h, r) {
+  Xx.beginPath();
+  Xx.moveTo(x + r, y);
+  Xx.lineTo(x + w - r, y);
+  Xx.quadraticCurveTo(x + w, y, x + w, y + r);
+  Xx.lineTo(x + w, y + h - r);
+  Xx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  Xx.lineTo(x + r, y + h);
+  Xx.quadraticCurveTo(x, y + h, x, y + h - r);
+  Xx.lineTo(x, y + r);
+  Xx.quadraticCurveTo(x, y, x + r, y);
+  Xx.closePath();
 }
 
 function drawDiamond(x, y, r) {
@@ -1140,267 +1310,429 @@ function drawDiamond(x, y, r) {
   Xx.closePath(); Xx.fill();
 }
 
-function drawPockets() {
-  for (let p of POCKETS) {
-    Xx.beginPath(); Xx.arc(p.x, p.y, PR + 5, 0, Math.PI * 2);
-    Xx.fillStyle = 'rgba(0,0,0,0.6)'; Xx.fill();
-    Xx.beginPath(); Xx.arc(p.x, p.y, PR + 2, 0, Math.PI * 2);
-    Xx.fillStyle = '#0a0a0a'; Xx.fill();
-    Xx.beginPath(); Xx.arc(p.x, p.y, PR, 0, Math.PI * 2);
-    const pg = Xx.createRadialGradient(p.x, p.y, 0, p.x, p.y, PR);
-    pg.addColorStop(0, '#111'); pg.addColorStop(1, '#050505');
-    Xx.fillStyle = pg; Xx.fill();
-    Xx.strokeStyle = '#2a1a0a'; Xx.lineWidth = 3; Xx.stroke();
-    Xx.beginPath(); Xx.arc(p.x, p.y, PR + 4, 0, Math.PI * 2);
-    Xx.strokeStyle = p.forPlayer === 'p1' ? 'rgba(200,50,50,0.5)' : 'rgba(200,200,200,0.4)';
-    Xx.lineWidth = 2; Xx.stroke();
+function drawTable() {
+  const wood = Xx.createLinearGradient(0, 0, W, H);
+  wood.addColorStop(0, '#603719');
+  wood.addColorStop(.18, '#8d6231');
+  wood.addColorStop(.48, '#5d3519');
+  wood.addColorStop(.72, '#9b6e3a');
+  wood.addColorStop(1, '#48270f');
+  Xx.fillStyle = wood;
+  roundedRect(0, 0, W, H, 26); Xx.fill();
+
+  Xx.save();
+  Xx.globalAlpha = .1;
+  for (let i = 0; i < 55; i++) {
+    const y = i * 10 + Math.sin(i * .7) * 4;
+    Xx.strokeStyle = i % 2 ? '#3f210d' : '#b07a44';
+    Xx.lineWidth = .6;
+    Xx.beginPath(); Xx.moveTo(0, y); Xx.lineTo(W, y + Math.sin(i) * 2); Xx.stroke();
   }
+  Xx.restore();
+
+  const railGrad = Xx.createLinearGradient(IL, IT, IR, IB);
+  railGrad.addColorStop(0, '#3a2413');
+  railGrad.addColorStop(1, '#a57842');
+  Xx.fillStyle = railGrad;
+  roundedRect(IL - 10, IT - 10, IR - IL + 20, IB - IT + 20, 18); Xx.fill();
+
+  Xx.fillStyle = feltPattern || '#245d3d';
+  roundedRect(IL, IT, IR - IL, IB - IT, 12); Xx.fill();
+
+  const light = Xx.createRadialGradient(CX, CY - 40, 60, CX, CY, 280);
+  light.addColorStop(0, 'rgba(150,220,170,.14)');
+  light.addColorStop(.45, 'rgba(80,160,100,.05)');
+  light.addColorStop(1, 'rgba(0,0,0,.28)');
+  Xx.fillStyle = light;
+  roundedRect(IL, IT, IR - IL, IB - IT, 12); Xx.fill();
+
+  Xx.strokeStyle = 'rgba(255,255,255,.05)';
+  Xx.lineWidth = 1;
+  Xx.beginPath(); Xx.moveTo(IL + 16, CY); Xx.lineTo(IR - 16, CY); Xx.stroke();
+
+  Xx.fillStyle = '#d7b15a';
+  [0.25,0.5,0.75].forEach(t => {
+    drawDiamond(IL / 2, IT + (IB - IT) * t, 4);
+    drawDiamond(IR + (W - IR) / 2, IT + (IB - IT) * t, 4);
+  });
+  [0.22,0.4,0.6,0.78].forEach(t => {
+    drawDiamond(IL + (IR - IL) * t, IT / 2, 4);
+    drawDiamond(IL + (IR - IL) * t, IB + (H - IB) / 2, 4);
+  });
+}
+
+function drawPockets() {
+  POCKETS.forEach(p => {
+    Xx.beginPath(); Xx.arc(p.x, p.y, PR + 6, 0, Math.PI * 2);
+    Xx.fillStyle = 'rgba(0,0,0,.55)'; Xx.fill();
+    Xx.beginPath(); Xx.arc(p.x, p.y, PR + 2, 0, Math.PI * 2);
+    Xx.fillStyle = '#070707'; Xx.fill();
+    const ring = Xx.createRadialGradient(p.x, p.y, 0, p.x, p.y, PR + 4);
+    ring.addColorStop(0, '#17110a');
+    ring.addColorStop(1, '#050505');
+    Xx.beginPath(); Xx.arc(p.x, p.y, PR, 0, Math.PI * 2);
+    Xx.fillStyle = ring; Xx.fill();
+    Xx.beginPath(); Xx.arc(p.x, p.y, PR + 4, 0, Math.PI * 2);
+    Xx.strokeStyle = p.targetFor === 'p1' ? 'rgba(219,92,92,.45)' : 'rgba(255,255,255,.4)';
+    Xx.lineWidth = 2; Xx.stroke();
+  });
+
+  pocketBursts.forEach(burst => {
+    Xx.save();
+    Xx.globalAlpha = burst.life;
+    for (let i = 0; i < 7; i++) {
+      const angle = (Math.PI * 2 * i) / 7 + (1 - burst.life);
+      const r = 7 + (1 - burst.life) * 16;
+      Xx.beginPath();
+      Xx.arc(burst.x + Math.cos(angle) * r, burst.y + Math.sin(angle) * r, 2.4 * burst.life, 0, Math.PI * 2);
+      Xx.fillStyle = burst.hue + (burst.life * .55) + ')';
+      Xx.fill();
+    }
+    Xx.restore();
+  });
 }
 
 function drawBumpers() {
-  for (let bp of BUMPERS) {
-    Xx.beginPath(); Xx.arc(bp.x + 1.5, bp.y + 2, BPR + 1, 0, Math.PI * 2);
-    Xx.fillStyle = 'rgba(0,0,0,0.35)'; Xx.fill();
-    const bg = Xx.createRadialGradient(bp.x - 4, bp.y - 4, 1, bp.x, bp.y, BPR);
-    bg.addColorStop(0, '#f8e878'); bg.addColorStop(0.3, '#d4b030');
-    bg.addColorStop(0.6, '#b89520'); bg.addColorStop(0.85, '#8b6914');
-    bg.addColorStop(1, '#604808');
+  BUMPERS.forEach(bp => {
+    Xx.beginPath(); Xx.arc(bp.x + 1.5, bp.y + 2.4, BPR + 1.5, 0, Math.PI * 2);
+    Xx.fillStyle = 'rgba(0,0,0,.32)'; Xx.fill();
+    const g = Xx.createRadialGradient(bp.x - 4, bp.y - 4, 1, bp.x, bp.y, BPR);
+    g.addColorStop(0, '#fff2a3');
+    g.addColorStop(.26, '#dcbf52');
+    g.addColorStop(.6, '#b28c28');
+    g.addColorStop(1, '#73520f');
     Xx.beginPath(); Xx.arc(bp.x, bp.y, BPR, 0, Math.PI * 2);
-    Xx.fillStyle = bg; Xx.fill();
-    Xx.beginPath(); Xx.arc(bp.x - 3, bp.y - 4, BPR * 0.35, 0, Math.PI * 2);
-    Xx.fillStyle = 'rgba(255,255,230,0.5)'; Xx.fill();
+    Xx.fillStyle = g; Xx.fill();
+    Xx.beginPath(); Xx.arc(bp.x - 3.4, bp.y - 4, BPR * .38, 0, Math.PI * 2);
+    Xx.fillStyle = 'rgba(255,255,240,.52)'; Xx.fill();
     Xx.beginPath(); Xx.arc(bp.x, bp.y, BPR, 0, Math.PI * 2);
-    Xx.strokeStyle = 'rgba(100,70,20,0.6)'; Xx.lineWidth = 1.5; Xx.stroke();
-  }
+    Xx.strokeStyle = 'rgba(67,40,8,.7)';
+    Xx.lineWidth = 1.2; Xx.stroke();
+  });
 }
 
-function drawBall(b) {
-  if (b.out) return;
-  Xx.beginPath(); Xx.ellipse(b.x + 2, b.y + 3, BR * 0.9, BR * 0.5, 0, 0, Math.PI * 2);
-  Xx.fillStyle = 'rgba(0,0,0,0.3)'; Xx.fill();
+function drawPowerArc(ball, power) {
+  const start = -Math.PI * .8;
+  const end = start + Math.PI * 1.6 * power;
+  const grad = Xx.createLinearGradient(ball.x - 18, ball.y, ball.x + 18, ball.y);
+  grad.addColorStop(0, '#3bd66e');
+  grad.addColorStop(.6, '#e2c64d');
+  grad.addColorStop(1, '#e05757');
+  Xx.beginPath();
+  Xx.arc(ball.x, ball.y, BR + 10, start, end);
+  Xx.strokeStyle = grad;
+  Xx.lineWidth = 4;
+  Xx.lineCap = 'round';
+  Xx.stroke();
+}
 
-  const gr = Xx.createRadialGradient(b.x - 3, b.y - 4, 1, b.x + 1, b.y + 2, BR * 1.1);
-  if (b.pl === 'p1') {
-    gr.addColorStop(0, '#ff8888'); gr.addColorStop(0.3, '#dd3333');
-    gr.addColorStop(0.7, '#aa1111'); gr.addColorStop(1, '#660808');
+function drawBall(ball) {
+  if (ball.out) return;
+  const scale = ball.scale || 1;
+  const alpha = ball.alpha == null ? 1 : ball.alpha;
+  const speed = Math.hypot(ball.vx, ball.vy);
+  const hx = Math.cos(ball.spin) * Math.min(3.8, speed * .8);
+  const hy = Math.sin(ball.spin) * Math.min(3.8, speed * .8);
+  Xx.save();
+  Xx.globalAlpha = alpha;
+  Xx.beginPath();
+  Xx.ellipse(ball.x + 2, ball.y + 3, BR * .9 * scale, BR * .52 * scale, 0, 0, Math.PI * 2);
+  Xx.fillStyle = 'rgba(0,0,0,.28)';
+  Xx.fill();
+
+  const grad = Xx.createRadialGradient(ball.x - 4 + hx, ball.y - 4 + hy, 1, ball.x + 1, ball.y + 2, BR * 1.15 * scale);
+  if (ball.pl === 'p1') {
+    grad.addColorStop(0, '#ffb1b1');
+    grad.addColorStop(.32, '#e04747');
+    grad.addColorStop(.72, '#a61717');
+    grad.addColorStop(1, '#5f0a0a');
   } else {
-    gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.3, '#eeeeee');
-    gr.addColorStop(0.7, '#bbbbbb'); gr.addColorStop(1, '#777777');
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(.32, '#e9edf3');
+    grad.addColorStop(.72, '#b6c0cb');
+    grad.addColorStop(1, '#707d8a');
   }
-  Xx.beginPath(); Xx.arc(b.x, b.y, BR, 0, Math.PI * 2);
-  Xx.fillStyle = gr; Xx.fill();
+  Xx.beginPath(); Xx.arc(ball.x, ball.y, BR * scale, 0, Math.PI * 2);
+  Xx.fillStyle = grad; Xx.fill();
 
-  const spec = Xx.createRadialGradient(b.x - 3, b.y - 4, 0, b.x - 3, b.y - 4, BR * 0.55);
-  spec.addColorStop(0, 'rgba(255,255,255,0.7)');
-  spec.addColorStop(0.5, 'rgba(255,255,255,0.15)');
+  const spec = Xx.createRadialGradient(ball.x - 4 + hx * 1.4, ball.y - 5 + hy * 1.4, 0, ball.x - 4 + hx * 1.4, ball.y - 5 + hy * 1.4, BR * .58 * scale);
+  spec.addColorStop(0, 'rgba(255,255,255,.78)');
+  spec.addColorStop(.45, 'rgba(255,255,255,.16)');
   spec.addColorStop(1, 'rgba(255,255,255,0)');
-  Xx.beginPath(); Xx.arc(b.x, b.y, BR, 0, Math.PI * 2);
+  Xx.beginPath(); Xx.arc(ball.x, ball.y, BR * scale, 0, Math.PI * 2);
   Xx.fillStyle = spec; Xx.fill();
 
-  Xx.beginPath(); Xx.arc(b.x, b.y, BR, 0, Math.PI * 2);
-  Xx.strokeStyle = 'rgba(0,0,0,0.2)'; Xx.lineWidth = 0.8; Xx.stroke();
+  Xx.beginPath(); Xx.arc(ball.x, ball.y, BR * scale, 0, Math.PI * 2);
+  Xx.strokeStyle = 'rgba(0,0,0,.22)';
+  Xx.lineWidth = .8; Xx.stroke();
 
-  if (b.m) {
-    Xx.beginPath(); Xx.arc(b.x, b.y, BR * 0.3, 0, Math.PI * 2);
-    Xx.fillStyle = b.pl === 'p1' ? '#fff' : '#333'; Xx.fill();
-    Xx.strokeStyle = b.pl === 'p1' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)';
-    Xx.lineWidth = 0.5; Xx.stroke();
+  if (ball.m) {
+    Xx.beginPath(); Xx.arc(ball.x, ball.y, BR * .28 * scale, 0, Math.PI * 2);
+    Xx.fillStyle = ball.pl === 'p1' ? '#fff5f5' : '#232932';
+    Xx.fill();
   }
 
-  if (b === sel) {
+  if (ball === sel) {
     Xx.save();
-    Xx.beginPath(); Xx.arc(b.x, b.y, BR + 5, 0, Math.PI * 2);
-    Xx.strokeStyle = '#ffe866'; Xx.lineWidth = 2.5;
-    Xx.shadowColor = '#ffe866'; Xx.shadowBlur = 10;
-    Xx.stroke(); Xx.restore();
+    Xx.shadowColor = '#ffe38c';
+    Xx.shadowBlur = 14;
+    Xx.beginPath(); Xx.arc(ball.x, ball.y, BR + 5, 0, Math.PI * 2);
+    Xx.strokeStyle = '#ffe38c';
+    Xx.lineWidth = 2.6; Xx.stroke();
+    Xx.restore();
   }
+
+  if (opponentAim.active && balls[opponentAim.ballIdx] === ball) {
+    Xx.beginPath(); Xx.arc(ball.x, ball.y, BR + 7, 0, Math.PI * 2);
+    Xx.strokeStyle = ball.pl === 'p1' ? 'rgba(219,92,92,.65)' : 'rgba(255,255,255,.62)';
+    Xx.setLineDash([4, 5]);
+    Xx.lineWidth = 2; Xx.stroke();
+    Xx.setLineDash([]);
+  }
+  Xx.restore();
+}
+
+function firstCollisionPoint(ball, dirX, dirY) {
+  const maxLen = 150;
+  for (let t = 20; t <= maxLen; t += 4) {
+    const x = ball.x + dirX * t;
+    const y = ball.y + dirY * t;
+    if (x - BR < IL || x + BR > IR || y - BR < IT || y + BR > IB) return { x, y };
+    if (BUMPERS.some(bp => Math.hypot(x - bp.x, y - bp.y) < BR + BPR + 1)) return { x, y };
+    if (balls.some(other => other !== ball && !other.out && !other.pocket && Math.hypot(x - other.x, y - other.y) < BR * 2 + 1)) return { x, y };
+  }
+  return { x: ball.x + dirX * maxLen, y: ball.y + dirY * maxLen };
 }
 
 function drawCue() {
   if (!sel || !aim || moving()) return;
-  const dx = sel.x - aim.x, dy = sel.y - aim.y, len = Math.hypot(dx, dy);
+  const dx = sel.x - aim.x;
+  const dy = sel.y - aim.y;
+  const len = Math.hypot(dx, dy);
   if (len < 10) return;
-  const nx = dx / len, ny = dy / len;
-  const pwr = Math.min(len / 15, 1);
+  const nx = dx / len;
+  const ny = dy / len;
+  const power = Math.min(len / 95, 1);
+  const shake = power > .92 ? (Math.sin(performance.now() / 28) * (power - .92) * 8) : 0;
+  const pull = 18 + power * 42 + shake;
+  const cueLen = 148;
+  const startX = sel.x - nx * (BR + 7 + pull);
+  const startY = sel.y - ny * (BR + 7 + pull);
+  const endX = startX - nx * cueLen;
+  const endY = startY - ny * cueLen;
+  const hit = firstCollisionPoint(sel, nx, ny);
 
-  const cueLen = 120;
-  const cueStart = BR + 6 + (1 - pwr) * 30;
-  const startX = sel.x - nx * cueStart, startY = sel.y - ny * cueStart;
-  const endX = startX - nx * cueLen, endY = startY - ny * cueLen;
+  drawPowerArc(sel, power);
 
   Xx.save();
-  // Cue shadow
-  Xx.strokeStyle = 'rgba(0,0,0,0.2)'; Xx.lineWidth = 7;
-  Xx.beginPath(); Xx.moveTo(startX + 2, startY + 2); Xx.lineTo(endX + 2, endY + 2); Xx.stroke();
-
-  // Cue body
-  const grad = Xx.createLinearGradient(startX, startY, endX, endY);
-  grad.addColorStop(0, '#f5e6c8'); grad.addColorStop(0.02, '#222');
-  grad.addColorStop(0.04, '#f5e6c8'); grad.addColorStop(0.5, '#c9a060');
-  grad.addColorStop(0.7, '#2a1508'); grad.addColorStop(0.75, '#1a0a04');
-  grad.addColorStop(1, '#0a0502');
-  Xx.strokeStyle = grad; Xx.lineWidth = 5; Xx.lineCap = 'round';
-  Xx.beginPath(); Xx.moveTo(startX, startY); Xx.lineTo(endX, endY); Xx.stroke();
-
-  // Aim line
-  const aimLen = 30 + pwr * 50;
-  Xx.setLineDash([4, 4]);
-  Xx.strokeStyle = `rgba(255,255,200,${0.2 + pwr * 0.3})`;
-  Xx.lineWidth = 1.5;
+  Xx.setLineDash([6, 6]);
+  Xx.strokeStyle = `rgba(255,244,210,${.2 + power * .25})`;
+  Xx.lineWidth = 1.4;
   Xx.beginPath();
   Xx.moveTo(sel.x + nx * (BR + 2), sel.y + ny * (BR + 2));
-  Xx.lineTo(sel.x + nx * (BR + 2 + aimLen), sel.y + ny * (BR + 2 + aimLen));
-  Xx.stroke(); Xx.setLineDash([]);
+  Xx.lineTo(hit.x, hit.y);
+  Xx.stroke();
+  Xx.setLineDash([]);
 
-  // Power bar
-  const barW = 50, barH = 5;
-  const barX = sel.x - barW / 2, barY = sel.y + BR + 14;
-  Xx.fillStyle = 'rgba(0,0,0,0.4)';
-  Xx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
-  const pwrGrad = Xx.createLinearGradient(barX, barY, barX + barW, barY);
-  pwrGrad.addColorStop(0, '#4a4'); pwrGrad.addColorStop(0.6, '#cc4'); pwrGrad.addColorStop(1, '#c44');
-  Xx.fillStyle = pwrGrad;
-  Xx.fillRect(barX, barY, barW * pwr, barH);
+  Xx.beginPath(); Xx.arc(hit.x, hit.y, 5, 0, Math.PI * 2);
+  Xx.fillStyle = 'rgba(255,244,210,.18)'; Xx.fill();
+
+  Xx.strokeStyle = 'rgba(0,0,0,.24)';
+  Xx.lineWidth = 7;
+  Xx.beginPath(); Xx.moveTo(startX + 2, startY + 2); Xx.lineTo(endX + 2, endY + 2); Xx.stroke();
+
+  const cueGrad = Xx.createLinearGradient(startX, startY, endX, endY);
+  cueGrad.addColorStop(0, '#f3e7ca');
+  cueGrad.addColorStop(.05, '#1e2127');
+  cueGrad.addColorStop(.11, '#f3e7ca');
+  cueGrad.addColorStop(.54, '#c59a57');
+  cueGrad.addColorStop(.8, '#311909');
+  cueGrad.addColorStop(1, '#090503');
+  Xx.strokeStyle = cueGrad;
+  Xx.lineWidth = 5.5;
+  Xx.lineCap = 'round';
+  Xx.beginPath(); Xx.moveTo(startX, startY); Xx.lineTo(endX, endY); Xx.stroke();
   Xx.restore();
 }
 
-function drawTrails() {
-  for (let i = trails.length - 1; i >= 0; i--) {
-    const t = trails[i];
-    t.life -= 0.04;
-    if (t.life <= 0) { trails.splice(i, 1); continue; }
-    Xx.beginPath(); Xx.arc(t.x, t.y, 2 * t.life, 0, Math.PI * 2);
-    Xx.fillStyle = t.col + (t.life * 0.3) + ')'; Xx.fill();
-  }
-}
-
-function drawTurnGlow() {
-  if (over || phase === 'break') return;
+function drawTableOverlay() {
   Xx.save();
-  Xx.globalAlpha = 0.12 + Math.sin(Date.now() / 400) * 0.06;
-  if (curP === 'p1') {
-    const g = Xx.createLinearGradient(0, IB - 40, 0, IB);
-    g.addColorStop(0, 'rgba(200,50,50,0)'); g.addColorStop(1, 'rgba(200,50,50,1)');
-    Xx.fillStyle = g; Xx.fillRect(IL, IB - 40, IR - IL, 40);
+  const pulse = .2 + Math.sin(performance.now() / 220) * .05;
+  Xx.globalAlpha = pulse;
+  Xx.fillStyle = phase === 'break' ? '#d7b15a' : curP === 'p1' ? '#db5c5c' : '#ffffff';
+  if (phase === 'break') {
+    Xx.fillRect(IL, IT, IR - IL, 10);
+    Xx.fillRect(IL, IB - 10, IR - IL, 10);
+  } else if (curP === 'p1') {
+    Xx.fillRect(IL, IB - 16, IR - IL, 16);
   } else {
-    const g = Xx.createLinearGradient(0, IT, 0, IT + 40);
-    g.addColorStop(0, 'rgba(200,200,200,1)'); g.addColorStop(1, 'rgba(200,200,200,0)');
-    Xx.fillStyle = g; Xx.fillRect(IL, IT, IR - IL, 40);
+    Xx.fillRect(IL, IT, IR - IL, 16);
   }
+  Xx.restore();
+
+  const msg = over ? '' : phase === 'break' ? (brk[myRole] ? 'WAITING...' : 'BREAK NOW') : (curP === myRole ? 'YOUR SHOT' : 'WAITING...');
+  if (!msg) return;
+  Xx.save();
+  Xx.font = 'bold 24px Georgia';
+  Xx.textAlign = 'center';
+  Xx.textBaseline = 'middle';
+  Xx.fillStyle = 'rgba(255,255,255,.12)';
+  Xx.fillText(msg, CX, CY);
   Xx.restore();
 }
 
 function draw() {
   Xx.clearRect(0, 0, W, H);
-  drawTable(); drawTurnGlow(); drawTrails(); drawPockets(); drawBumpers();
-  for (let b of balls) drawBall(b);
+  drawTable();
+  drawTableOverlay();
+  drawPockets();
+  drawBumpers();
+  balls.forEach(drawBall);
   drawCue();
 }
 
-// Safety: if firing has been true for too long with no movement, clear it
 let firingStartTime = 0;
-
 function loop() {
-  if (over) { draw(); return; }
-  const was = moving();
-  phys(); draw();
-  if (was && !moving() && firing) {
-    firing = false; firingStartTime = 0;
-    stopped();
-  }
-  // Safety valve: if firing but nothing has moved for 2 seconds, unstick
+  const wasMoving = moving();
+  phys();
+  draw();
+  if (wasMoving && !moving()) stopped();
   if (firing && !moving()) {
-    if (firingStartTime === 0) firingStartTime = Date.now();
-    else if (Date.now() - firingStartTime > 2000) {
-      firing = false; firingStartTime = 0;
-      stopped();
-    }
-  } else if (firing && moving()) {
-    firingStartTime = 0;
-  }
+    if (!firingStartTime) firingStartTime = Date.now();
+    else if (Date.now() - firingStartTime > 1800) stopped();
+  } else firingStartTime = 0;
   af = requestAnimationFrame(loop);
 }
 
-// ==================== INPUT ====================
 function gp(e) {
   const r = Cv.getBoundingClientRect();
-  const cx = e.touches ? e.touches[0].clientX : e.clientX;
-  const cy = e.touches ? e.touches[0].clientY : e.clientY;
-  return { x: (cx - r.left) / sc, y: (cy - r.top) / sc };
+  const point = e.touches ? e.touches[0] || e.changedTouches[0] : e;
+  return { x:(point.clientX - r.left) / sc, y:(point.clientY - r.top) / sc };
 }
 
-function onD(e) {
-  e.preventDefault(); AudioEngine.resume();
+function onDown(e) {
+  e.preventDefault();
+  AudioEngine.init();
+  AudioEngine.resume();
   if (!canIShoot()) return;
   const p = gp(e);
-  for (let b of balls) {
-    if (b.out || b.pl !== myRole) continue;
+  for (const b of balls) {
+    if (b.out || b.pocket || b.pl !== myRole) continue;
     if (Math.hypot(p.x - b.x, p.y - b.y) < BR + 16) {
-      const mb = balls.find(mm => mm.pl === myRole && mm.m);
-      if (mb && !mb.out && b !== mb) continue;
-      sel = b; aim = p; return;
+      const marked = markedBallFor(myRole);
+      if (marked && !marked.out && b !== marked) continue;
+      sel = b;
+      aim = p;
+      send({ type:'aim-start', role:myRole, ballIdx:balls.indexOf(b) });
+      return;
     }
   }
 }
 
-function onM(e) { e.preventDefault(); if (sel) aim = gp(e); }
-
-function onU(e) {
+function onMove(e) {
+  if (!sel) return;
   e.preventDefault();
+  aim = gp(e);
+}
+
+function clearAim(sendMsg = true) {
+  if (sendMsg) send({ type:'aim-end', role:myRole });
+  sel = null;
+  aim = null;
+}
+
+function onUp(e) {
   if (!sel || !aim) return;
-  const dx = sel.x - aim.x, dy = sel.y - aim.y, len = Math.hypot(dx, dy);
+  e.preventDefault();
+  const dx = sel.x - aim.x;
+  const dy = sel.y - aim.y;
+  const len = Math.hypot(dx, dy);
   if (len > 10) {
-    const pwr = Math.min(len / 15, 1) * 16;
-    const vx = (dx / len) * pwr, vy = (dy / len) * pwr;
+    const power = Math.min(len / 95, 1) * 16;
+    const vx = (dx / len) * power;
+    const vy = (dy / len) * power;
     const idx = balls.indexOf(sel);
     if (phase === 'break') {
       brk[myRole] = true;
-      breakShots[myRole] = { ballIdx: idx, vx, vy };
-      send({ type: 'break-aim', ballIdx: idx, vx, vy });
-      hud();
+      breakShots[myRole] = { ballIdx:idx, vx, vy };
+      send({ type:'break-aim', role:myRole, ballIdx:idx, vx, vy });
       if (brk.p1 && brk.p2) launchBreak();
     } else {
-      sel.vx = vx; sel.vy = vy;
-      firing = true; sunk = false;
-      send({ type: 'shot', ballIdx: idx, vx, vy });
+      sel.vx = vx;
+      sel.vy = vy;
+      firing = true;
+      sunkThisTurn = false;
+      send({ type:'shot', ballIdx:idx, vx, vy });
     }
-    AudioEngine.strike(pwr / 16);
-    if (navigator.vibrate) navigator.vibrate(20);
+    AudioEngine.strike(power / 16);
+    if (navigator.vibrate) navigator.vibrate(18);
   }
-  sel = null; aim = null;
+  clearAim();
+  updateTurnUI();
 }
 
-Cv.addEventListener('mousedown', onD);
-Cv.addEventListener('mousemove', onM);
-Cv.addEventListener('mouseup', onU);
-Cv.addEventListener('touchstart', onD, { passive: false });
-Cv.addEventListener('touchmove', onM, { passive: false });
-Cv.addEventListener('touchend', onU, { passive: false });
+Cv.addEventListener('mousedown', onDown);
+Cv.addEventListener('mousemove', onMove);
+Cv.addEventListener('mouseup', onUp);
+Cv.addEventListener('mouseleave', () => { if (sel) clearAim(); });
+Cv.addEventListener('touchstart', onDown, { passive:false });
+Cv.addEventListener('touchmove', onMove, { passive:false });
+Cv.addEventListener('touchend', onUp, { passive:false });
+Cv.addEventListener('touchcancel', () => { if (sel) clearAim(); }, { passive:false });
 
-// Auto-join from URL
+function updateRematchStatus() {
+  if (!rematch.mine && !rematch.opp) {
+    $('rematch-status').textContent = '';
+    $('rb').textContent = 'Play Again';
+    $('rb').disabled = false;
+    return;
+  }
+  if (!rematch.mine && rematch.opp) {
+    $('rematch-status').textContent = `${roleName(myRole === 'p1' ? 'p2' : 'p1')} wants a rematch.`;
+    $('rb').textContent = 'Accept Rematch';
+    $('rb').disabled = false;
+    return;
+  }
+  const waited = rematch.startedAt && Date.now() - rematch.startedAt > 10000;
+  $('rematch-status').textContent = rematch.opp ? 'Both players accepted. Resetting...' : waited ? 'Waiting for opponent...' : 'Rematch requested.';
+  $('rb').textContent = rematch.opp ? 'Starting...' : 'Waiting...';
+  $('rb').disabled = true;
+}
+
+function triggerRematchStart() {
+  send({ type:'rematch-start' });
+  initGameState();
+}
+
+function requestRematch() {
+  if (!over || rematch.mine) return;
+  rematch.mine = true;
+  rematch.startedAt = Date.now();
+  send({ type:'rematch-request', role:myRole });
+  updateRematchStatus();
+  if (isHost && rematch.opp) triggerRematchStart();
+}
+
+$('rb').onclick = requestRematch;
+
 (function autoJoin() {
   const params = new URLSearchParams(window.location.search);
   const joinCode = params.get('join');
   if (joinCode) {
-    document.getElementById('join-input').value = joinCode.toUpperCase();
-    setTimeout(() => joinGame(), 500);
+    $('join-input').value = joinCode.toUpperCase();
+    setTimeout(joinGame, 350);
   }
 })();
 
-// Tab visibility — reconnect + resume audio
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') {
-    AudioEngine.resume();
-    if (!connected && gameStarted) {
-      forceReconnect();
-    } else if (peer && peer.disconnected && !peer.destroyed) {
-      peer.reconnect();
-    }
-  }
+  if (document.visibilityState !== 'visible') return;
+  AudioEngine.resume();
+  if (!connected && gameStarted) $('retry-btn').click();
+  else if (peer && peer.disconnected && !peer.destroyed) peer.reconnect();
 });
 
-// Prevent iOS from killing the page
-document.addEventListener('freeze', () => {}, { capture: true });
+resize();
+updateMyProfile();
 </script>
 </body>
 </html>

@@ -999,7 +999,7 @@ const H = 630;
 const RAIL = 30;
 const IL = RAIL, IR = W - RAIL, IT = RAIL, IB = H - RAIL;
 const CX = W / 2, CY = H / 2;
-const BR = 14, BPR = 16, PR = 22, PSINK = 19;
+const BR = 14, BPR = 16, PR = 24, PSINK = 21;
 const FRICTION = .986;
 const RAIL_RESTITUTION = .68;
 const BUMPER_RESTITUTION = .78;
@@ -1107,17 +1107,17 @@ function rackBalls() {
   // Other 4 balls in two pairs flanking the pocket bumpers on the OUTSIDE
   // This keeps the center lane clear for the break shot
   const frontOffset = 38; // marked ball distance from pocket rail
-  // 4 balls positioned beside the pocket bumpers, evenly spaced outward
-  // Pocket bumpers at CX±38 (x=172, 248), BPR=16, BR=14
-  // Inner balls sit just outside bumper edge, outer balls halfway to rail
-  const bumpEdgeL = CX - 38 - BPR - BR - 2;  // ~142 — just left of left bumper
-  const bumpEdgeR = CX + 38 + BPR + BR + 2;  // ~278 — just right of right bumper
-  const outerL = (IL + BR + bumpEdgeL) / 2;   // ~88 — halfway to left rail
-  const outerR = (IR - BR + bumpEdgeR) / 2;   // ~332 — halfway to right rail
-  const x1 = outerL;
-  const x2 = bumpEdgeL;
-  const x3 = bumpEdgeR;
-  const x4 = outerR;
+  // 4 balls beside pocket bumpers with clearance for shots
+  // Pocket bumpers at CX±39, BPR=16, BR=14
+  // 12px gap between ball edge and bumper edge
+  const clearance = 12;
+  const innerL = CX - 39 - BPR - BR - clearance;  // ~129
+  const innerR = CX + 39 + BPR + BR + clearance;  // ~291
+  const ballSpacing = 32; // ~2.8 inches apart at scale
+  const x1 = innerL - ballSpacing;  // outer left
+  const x2 = innerL;                // inner left
+  const x3 = innerR;                // inner right
+  const x4 = innerR + ballSpacing;  // outer right
   const pairY = 28;       // pair vertical offset from rail (same height as pocket bumpers)
   const p1y = IB - frontOffset;
   const p2y = IT + frontOffset;

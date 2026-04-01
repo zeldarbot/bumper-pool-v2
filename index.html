@@ -35,128 +35,105 @@ body{
   -webkit-user-select:none;user-select:none;
   display:flex;justify-content:center;
 }
-.app{width:min(100%,1080px);padding:8px;display:flex;flex-direction:column;align-items:center;gap:8px}
-h1{display:none}
+/* === GamePigeon-clean lobby === */
+.app{width:100%;max-width:480px;padding:0;display:flex;flex-direction:column;align-items:center}
+h1{
+  font-size:1.4rem;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--gold);text-shadow:0 2px 12px rgba(200,169,110,.25);
+  padding:16px 0 0;margin:0
+}
 .panel{
-  width:min(100%,980px);background:linear-gradient(180deg,rgba(13,24,18,.94),rgba(8,14,10,.97));
-  border:1px solid rgba(107,66,38,.28);border-radius:24px;box-shadow:0 20px 70px rgba(0,0,0,.5);backdrop-filter:blur(10px)
+  width:100%;background:var(--bg);border:none;border-radius:0;box-shadow:none
 }
 #lobby{
-  position:relative;height:calc(100dvh - 16px);padding:20px;display:flex;flex-direction:column;gap:16px;
-  overflow:auto;scroll-behavior:smooth;scroll-snap-type:y proximity
+  padding:0 16px 24px;display:flex;flex-direction:column;gap:0;
+  height:calc(100dvh);overflow:auto;-webkit-overflow-scrolling:touch
 }
-.section-title{font-size:.72rem;color:var(--gold);text-transform:uppercase;letter-spacing:.2em;margin-bottom:6px}
-.parallax-bg{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
-.px-layer{position:absolute;will-change:transform,opacity;filter:drop-shadow(0 14px 20px rgba(0,0,0,.3));opacity:.12}
-#px-cue{width:min(60vw,400px);right:-80px;top:22%;transform:translate3d(0,0,0) rotate(-8deg)}
-#px-ball{width:80px;left:6%;top:8%}
-#px-bumper{width:72px;right:6%;bottom:10%}
-.hero{position:relative;z-index:1;scroll-snap-align:start;
-  border:1px solid rgba(107,66,38,.3);border-radius:20px;padding:16px 16px;
-  background:
-    radial-gradient(circle at top left,rgba(27,53,40,.5),transparent 42%),
-    linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.04)
+.section-title{font-size:.7rem;color:var(--gold);text-transform:uppercase;letter-spacing:.18em;margin-bottom:4px}
+.parallax-bg{display:none}
+.hero{
+  text-align:center;padding:20px 0 16px;border:none;border-radius:0;
+  background:none;box-shadow:none
 }
-.hero-kicker{margin-bottom:6px}
-.hero-kicker{
-  display:inline-flex;align-items:center;gap:8px;
-  font-size:.7rem;color:var(--gold);letter-spacing:.28em;text-transform:uppercase;
-  margin-bottom:10px
-}
-.hero-kicker::before{
-  content:"";width:26px;height:1px;background:linear-gradient(90deg,var(--gold),transparent)
-}
-.hero h2{font-size:clamp(1.3rem,4.5vw,1.8rem);letter-spacing:.02em;line-height:1.08;margin-bottom:4px}
-.hero p{color:#b8b0a0;font-size:.85rem;line-height:1.4;max-width:32ch}
-.lobby-stage{position:relative;min-height:auto;overflow:hidden;border-radius:20px;z-index:1;scroll-snap-align:start}
-.lobby-step{
-  display:none;opacity:0;transform:translateX(16px);
-  transition:opacity .28s ease,transform .32s cubic-bezier(.2,.8,.2,1)
-}
-.lobby-step.active{display:block;opacity:1;transform:translateX(0)}
-.card{
-  background:linear-gradient(180deg,rgba(27,53,40,.35),rgba(20,40,30,.2));
-  border:1px solid rgba(107,66,38,.2);border-radius:18px;padding:16px;
-  box-shadow:0 12px 32px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.02)
-}
-.step-shell{display:flex;flex-direction:column;gap:14px}
-.step-head{display:flex;flex-direction:column;gap:4px}
-.step-meta{font-size:.68rem;color:var(--gold);letter-spacing:.2em;text-transform:uppercase}
-.step-head h3{font-size:1.15rem;font-weight:normal;line-height:1.1;color:#f0ead4}
+.hero-kicker{display:none}
+.hero h2{font-size:1.1rem;color:#c8a96e;letter-spacing:.06em;font-weight:normal;margin:0}
+.hero p{display:none}
+.lobby-stage{border-radius:0}
+.lobby-step{display:none}
+.lobby-step.active{display:flex;flex-direction:column;gap:12px}
+.card{background:none;border:none;border-radius:0;padding:0;box-shadow:none}
+.step-shell{display:flex;flex-direction:column;gap:12px}
+.step-head{display:flex;flex-direction:column;gap:2px;margin-bottom:4px}
+.step-meta{font-size:.65rem;color:var(--gold-2);letter-spacing:.16em;text-transform:uppercase}
+.step-head h3{font-size:1.05rem;font-weight:600;color:#f0ead4}
 .step-copy{display:none}
-.player-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.player-grid{display:flex;flex-direction:column;gap:8px}
 .player-card{
-  width:100%;padding:14px 16px;border-radius:16px;text-align:left;cursor:pointer;
-  border:1px solid rgba(107,66,38,.2);min-height:54px;
-  background:linear-gradient(180deg,rgba(27,53,40,.3),rgba(20,40,30,.15));
-  color:var(--ink);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background .18s ease
+  width:100%;padding:14px 16px;border-radius:12px;text-align:left;cursor:pointer;
+  border:1px solid rgba(255,255,255,.06);min-height:52px;
+  background:rgba(255,255,255,.04);
+  color:var(--ink);transition:all .15s ease;
+  display:flex;align-items:center;gap:12px
 }
-.player-card:active{transform:scale(.99)}
+.player-card:active{transform:scale(.98);opacity:.85}
 .player-card.active{
-  border-color:rgba(200,169,110,.4);
-  background:linear-gradient(180deg,rgba(27,53,40,.5),rgba(107,66,38,.15));
-  box-shadow:0 18px 36px rgba(0,0,0,.28),0 0 0 1px rgba(200,169,110,.15)
+  border-color:var(--gold);
+  background:rgba(200,169,110,.1);
+  box-shadow:0 0 0 1px var(--gold)
 }
-.player-name-lg{display:block;font-size:1.05rem;line-height:1.1;color:#f0ead4}
-.player-record{display:block;color:#b8b0a0;font-size:.82rem;margin-top:4px}
-.player-card.active .player-record{color:#ddceb2}
+.player-name-lg{font-size:1rem;font-weight:600;color:#f0ead4}
+.player-record{font-size:.78rem;color:#9b9680;margin-top:2px}
+.player-card.active .player-record{color:#c8a96e}
 .chip,.ghost-btn,.primary-btn,.secondary-btn{
-  border:none;border-radius:14px;padding:14px 20px;font:inherit;cursor:pointer;
-  transition:.18s transform,.18s box-shadow,.18s opacity;font-size:.92rem;
-  min-height:48px;display:flex;align-items:center;justify-content:center
+  border:none;border-radius:12px;padding:0 20px;font:inherit;cursor:pointer;
+  transition:all .15s ease;font-size:.95rem;font-weight:600;
+  min-height:50px;display:flex;align-items:center;justify-content:center;width:100%
 }
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.inline-add{display:none;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.inline-add{display:none;grid-template-columns:1fr auto;gap:8px;align-items:center}
 .inline-add.show{display:grid}
-.inline-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.step-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.step-actions .primary-btn,.step-actions .secondary-btn,.step-actions .ghost-btn{min-height:48px}
+.inline-actions{display:flex;gap:8px}
+.step-actions{display:flex;gap:8px;flex-direction:column}
 .field{
-  width:100%;background:#0c1610;color:#f0ead4;border:1px solid rgba(107,66,38,.3);
-  border-radius:14px;padding:14px 16px;font:inherit;font-size:1rem;outline:none;min-height:48px
+  width:100%;background:rgba(255,255,255,.06);color:#f0ead4;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;padding:14px 16px;font:inherit;font-size:1rem;outline:none;min-height:50px
 }
-.field:focus{border-color:rgba(200,169,110,.45);box-shadow:0 0 0 3px rgba(200,169,110,.1)}
-.ghost-btn,.secondary-btn{
-  background:rgba(27,53,40,.4);color:#e8e2d4;border:1px solid rgba(107,66,38,.25)
-}
+.field:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(200,169,110,.15)}
+.ghost-btn{background:rgba(255,255,255,.04);color:#c8b890;border:1px solid rgba(255,255,255,.08)}
+.secondary-btn{background:rgba(255,255,255,.06);color:#f0ead4;border:1px solid rgba(255,255,255,.1)}
 .primary-btn{
-  background:linear-gradient(135deg,var(--gold),var(--wood-light));color:#1a0f04;font-weight:bold;
-  box-shadow:0 8px 20px rgba(107,66,38,.35)
+  background:var(--gold);color:#0a120d;font-weight:700;
+  box-shadow:0 4px 14px rgba(200,169,110,.3)
 }
-.mode-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.primary-btn:active{transform:scale(.97);box-shadow:0 2px 8px rgba(200,169,110,.2)}
+.mode-grid{display:flex;flex-direction:column;gap:8px}
 .action-card{
-  padding:16px;border-radius:18px;border:1px solid rgba(255,255,255,.1);
-  background:
-    radial-gradient(circle at top left,rgba(255,255,255,.06),transparent 40%),
-    linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
-  display:flex;flex-direction:column;justify-content:space-between;gap:10px
+  padding:16px;border-radius:14px;border:1px solid rgba(255,255,255,.06);
+  background:rgba(255,255,255,.03);
+  display:flex;align-items:center;gap:14px
 }
-.action-card h4{font-size:1.1rem;font-weight:bold;letter-spacing:.02em;color:#f0ead4}
-.action-card p{color:#b8b0a0;font-size:.82rem;line-height:1.35}
+.action-card>div{flex:1}
+.action-card h4{font-size:.95rem;font-weight:600;color:#f0ead4;margin-bottom:2px}
+.action-card p{color:#9b9680;font-size:.78rem;line-height:1.3}
 .action-card .primary-btn,.action-card .secondary-btn{
-  min-height:48px;font-size:.95rem;width:100%
+  min-height:44px;width:auto;padding:0 18px;flex-shrink:0;font-size:.88rem
 }
 .mode-icon{display:none}
-.mode-card{
-  padding:16px;border-radius:18px;border:1px solid rgba(107,66,38,.2);
-  background:linear-gradient(180deg,rgba(27,53,40,.25),rgba(20,40,30,.12))
-}
-.mode-card h3{font-size:1rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
-.mode-card p{color:var(--muted);font-size:.84rem;line-height:1.4;margin-bottom:12px}
+.mode-card{display:none}
 .room-display{
-  padding:24px 18px;border-radius:22px;text-align:center;
-  border:1px solid rgba(215,177,90,.14);
-  background:radial-gradient(circle at center,rgba(215,177,90,.12),rgba(255,255,255,.02) 55%)
+  padding:20px 16px;border-radius:14px;text-align:center;
+  border:1px solid rgba(200,169,110,.12);
+  background:rgba(200,169,110,.05)
 }
 #room-code{
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:clamp(2.2rem,11vw,3.6rem);letter-spacing:.3em;
-  color:var(--gold);text-align:center;margin:10px 0 4px;text-shadow:0 0 18px rgba(215,177,90,.28)
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:clamp(2.4rem,12vw,3.8rem);letter-spacing:.3em;
+  color:var(--gold);text-align:center;margin:8px 0 4px
 }
-.status{min-height:22px;color:var(--muted);font-size:.84rem}
+.status{min-height:18px;color:#9b9680;font-size:.82rem}
 .status.center{text-align:center}
-.waiting-copy{color:var(--muted);font-size:.95rem;line-height:1.5;text-align:center;max-width:34ch;margin:0 auto}
-.waiting-spinner{display:flex;justify-content:center;padding-top:6px}
+.waiting-copy{color:#9b9680;font-size:.88rem;line-height:1.4;text-align:center;max-width:30ch;margin:0 auto}
+.waiting-spinner{display:flex;justify-content:center;padding-top:4px}
 .muted{color:var(--muted)}
 #game{display:none;flex-direction:column;align-items:center;gap:10px;width:100%}
 #topbar{
@@ -225,10 +202,9 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
   border-radius:50%;animation:spin .85s linear infinite;margin:0 auto 14px
 }
 @keyframes spin{to{transform:rotate(360deg)}}
-@media (min-width:760px){
-  #lobby{padding:24px}
+@media (min-width:500px){
+  .app{max-width:520px}
   .player-grid{grid-template-columns:1fr 1fr}
-  .mode-grid{grid-template-columns:1fr 1fr 1fr}
 }
 </style>
 </head>
@@ -237,15 +213,8 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
   <h1>Bumper Pool</h1>
 
   <div id="lobby" class="panel">
-    <div class="parallax-bg" aria-hidden="true">
-      <img id="px-cue" class="px-layer" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAaQAAABQCAYAAABWOAGOAAAB20lEQVR4nO3dsS7FUBzA4V4RMUuZGgtvYHA3b0AsRkNXCR7CAyCxGowWiaeweAN3kTvRmG3kTiIRGm1vzzn9vvmmOcNtfz3/tGmWAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKMfFR53fLXa/FABSj0kbBAkgQeUcQ9IWQQIITBlhTNogSEBnNoq1QV1Yd4qlvpcQtYW+FwAAM4IEQBCM7CBR1eNl7+Oy7b2zvpdARAQJEo0BhOL+6T3L8/zXc6KqqpEgkRwxgDj9GKS31+fad3crq+ujVldE1MQAaBSkw6uLbwE6vb3Lzg/2/31Q5k8IgNgZ2bVADACaiz5IYgCQhsZBEgQAgghSvnXc60MNggiQhuhHdn0HcUYUAZqLPkghEEWAloJ0c3Qy+u97SIQhhCjO2C0Cre6QvOxKzGEURYiTkR3JEUWIkyBBB0QRvuxuLmfXD9M/pyeCBIkKIYpD+2IszfhAHwBBECQAgmBkB3RmMn3pfWw4T5NpO8cpx8UgR52D+rMADEUZWNTqPNQgSAB0HrY6QQKAQe3WAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACDr0yfG1Gpu647icgAAAABJRU5ErkJggg==">
-      <img id="px-ball" class="px-layer" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAC3UlEQVR4nO2du1LDMBBFJQ1VGn8LFY0r6rR8JW1qKjVUfIubtDAUmWGCreixq92V7m2ZgHOOVpLjoHUOQRAEmTXeGcnlI36Xvub8uqp/f34U2Fal+Bmga5bhZ4OuTYa3An59eS7+O/HzS70IrxX8WgGcUkgvEV4L+JUBOIUQbhFeGv4qAL5UBKcELwVfA/gSEVwSWH6pNfCSInwv+BbA54qglBAcYUaCn7puyvsXMgGjwe8lgaSU9i7GOvjcKal1OmqugFngH72v1kpoEjATfC4JXgP85XR6P/rZdr2+uYGnIy8Jf0mAtyCCQgLJLqgU/i/4Evi1r+EOxXRbLKB10WmFuCiT0Mon9Jx6qOAtiiS0LsrBGvzRJFSvAaNvN3vxCBbmfQtVUMutqgIw+um4BKujf5QqKK4AjH5aPsHK93YsJ8WxqAIw+uk5kT4RQ8oTcssGo78s97yOpiFUgHDYBXB/jLwp/Ji6WQB2PzzZ45pVAa3zP9co3ZSP/hxuWAOE000A9WjdlI/+3HStACpo2yDwdwVw7/9b4W3G4D+6H3hyArlBXIx/K4IiIgJKRGyDglchYBbIqWAbKhwIEA4ECAcChAMBwoEA4UCAcCBAOBCgTcD9f3jUHPmCHPO754sKEA4ECAcCLAjAOlCXHG5B62mCI2aPK6Yg4UCAVgG4H+Dd/9+CChBOkQDshug5JQVgN0STFMfiKQhVQMvnoQBUQVse8atahFEFdFyyBKAK6pLDrXobiiqg4RFabEJC+9FlRRUACfTnxhVPQVgP0hE5tG/WqSgSvO8qAZiKHNm5odUVMLOESHiGdNMUNKOESHyAd/MaMJOEyHB6Otmz31H7B3B30iB7IHN0MdarITK3MSF9IjaahNihhwy6KI3WRclyO6s4Sh+xv0EnvXTQS3L0XpJ/g26q/4N+wjP1E9Z8Nt15po7ae7mgp7yeXBhlaHugpOpiqKVog40gCOJ05QcGTaUZBfF0jQAAAABJRU5ErkJggg==">
-      <img id="px-bumper" class="px-layer" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAADcUlEQVR4nO2dMW7bQBBFOURaFwbcGMgpfAgVuoBaH0MxXAaJj8GWF9jCh/ApArgxkMIHSJoIUARSnNmd3Z3Z/b+1DJH/7fwVCXJmGCAIgiAIgnoUDU50vLv7I/2fl48P8+dHrZjtFQr1YLplGNSj8ZZAkBfjd/f34u94fX83D4KsGr+LMFwLSEkQZMn4XQbTU2CUAEG1zd8VND0GRm4I5Mn46eY3+7OPn7cuQJBl8yeB4VpASkOgkuZzjJ8UTU+BsQZCGwJZMH9imr5/+Mo+jvD2KxlGCQiU2/ytVT9dMV9ieAqQrYpYAqEFgWqZv2b8XtF0KQxpNWhAICvm7wsYzwFRGgKVNN+K8SkgtCGMQ+fmrx3HWkQunV/KDUWqYb4V4znVkLsSkiqgNfOXjk9SCTGKAsAtOW/mSyFoRBHlip5U8w9Pz9/W/jb/+P5zMBJHqVGUDEDb/MMV42uAiIEgASCKoJgSy2V+zOdjFBObEp8o5+rnHvxBwcjc1XBeCZpVMOaMnlY1LZznpR/cKlD7GXqpkqu/RBzl+gU3eo+eWhC0qkClAnqJnhznPWr/8qm1+q1G0ZZ/4gqw8BSDZUn9SY6gmOz3rv3GXqAGwMJzmy3omo+iCkD86PuUFEE9xo92DGW7EIOMA8h172YudKs6OwDO1S+0Lu5V8Vgz/2fl1Vp69WvsA9X3gFnJNG/RYwZA7/oyGND8b/XG3MfxuvJNVsAsNNO7+WYqQFoNLRhvFkCLJruJoB4FAJUFAJUFAF4BnD+cxH0hrjWFjYe1kgBcPtklbXzRu16ZT8ohgioLADwD6HkfCAr5LwaAfUDfp9F6T7UWdM3H5D2gxxgKSvETBQAxpOvPJgBpDLVeBUF4flv+qfwMTS1Dr9I4bxYAzlVxD3tByPCeWLYLsdYghEznwwYgrYKW9VjjLckl9RJFQRg9EokAxFyYeYcQIo4/25vyS+JEkVcIIbJXhESjBt0WIYQCjTqiK4D7JV4hBGbTJlMNm9ZK0RuEkNAxK0ZJdztb6RlXs3FfUgVw94O1kwlGqqFm10T0DfXeN/QkdM6NE3pHD430jj4J3dNlwvyA1uYHnIQJGjxhhkyrM2TOhSlK68IcsR7miJ0Lk/T+F2ZJ9jZL0mJXrpcep6le6oh5wnZ0xERtezo2OlMegiAIgqChjv4CrGuME3Qq6+UAAAAASUVORK5CYII=">
-    </div>
     <div class="hero">
-      <div class="hero-kicker">Bumper Pool</div>
-      <h2>Pick a player. Pick a mode. Break.</h2>
-      <p>Fast setup, clean table-first UX.</p>
+      <h2>Bumper Pool</h2>
     </div>
 
     <div class="lobby-stage">
@@ -276,45 +245,25 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
       <section id="step-mode" class="lobby-step">
         <div class="card step-shell">
           <div class="step-head">
-            <div>
-              <div class="step-meta">Step 2</div>
-              <h3>Choose game mode</h3>
-            </div>
-            <div class="step-copy">Create, join, or play CPU.</div>
+            <div class="step-meta">Step 2</div>
+            <h3>How do you want to play?</h3>
           </div>
           <div class="mode-grid">
             <div class="action-card">
-              <div>
-                <img class="mode-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAC3UlEQVR4nO2du1LDMBBFJQ1VGn8LFY0r6rR8JW1qKjVUfIubtDAUmWGCreixq92V7m2ZgHOOVpLjoHUOQRAEmTXeGcnlI36Xvub8uqp/f34U2Fal+Bmga5bhZ4OuTYa3An59eS7+O/HzS70IrxX8WgGcUkgvEV4L+JUBOIUQbhFeGv4qAL5UBKcELwVfA/gSEVwSWH6pNfCSInwv+BbA54qglBAcYUaCn7puyvsXMgGjwe8lgaSU9i7GOvjcKal1OmqugFngH72v1kpoEjATfC4JXgP85XR6P/rZdr2+uYGnIy8Jf0mAtyCCQgLJLqgU/i/4Evi1r+EOxXRbLKB10WmFuCiT0Mon9Jx6qOAtiiS0LsrBGvzRJFSvAaNvN3vxCBbmfQtVUMutqgIw+um4BKujf5QqKK4AjH5aPsHK93YsJ8WxqAIw+uk5kT4RQ8oTcssGo78s97yOpiFUgHDYBXB/jLwp/Ji6WQB2PzzZ45pVAa3zP9co3ZSP/hxuWAOE000A9WjdlI/+3HStACpo2yDwdwVw7/9b4W3G4D+6H3hyArlBXIx/K4IiIgJKRGyDglchYBbIqWAbKhwIEA4ECAcChAMBwoEA4UCAcCBAOBCgTcD9f3jUHPmCHPO754sKEA4ECAcCLAjAOlCXHG5B62mCI2aPK6Yg4UCAVgG4H+Dd/9+CChBOkQDshug5JQVgN0STFMfiKQhVQMvnoQBUQVse8atahFEFdFyyBKAK6pLDrXobiiqg4RFabEJC+9FlRRUACfTnxhVPQVgP0hE5tG/WqSgSvO8qAZiKHNm5odUVMLOESHiGdNMUNKOESHyAd/MaMJOEyHB6Otmz31H7B3B30iB7IHN0MdarITK3MSF9IjaahNihhwy6KI3WRclyO6s4Sh+xv0EnvXTQS3L0XpJ/g26q/4N+wjP1E9Z8Nt15po7ae7mgp7yeXBhlaHugpOpiqKVog40gCOJ05QcGTaUZBfF0jQAAAABJRU5ErkJggg==">
-                <div class="section-title">Create</div>
-                <h4>Host Room</h4>
-                <p>Get a code. Share. Play.</p>
-              </div>
-              <button class="primary-btn" id="create-btn">Create Room</button>
+              <div><h4>Host Room</h4><p>Create &amp; share code</p></div>
+              <button class="primary-btn" id="create-btn">Create</button>
             </div>
             <div class="action-card">
-              <div>
-                <img class="mode-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAADcUlEQVR4nO2dMW7bQBBFOURaFwbcGMgpfAgVuoBaH0MxXAaJj8GWF9jCh/ApArgxkMIHSJoIUARSnNmd3Z3Z/b+1DJH/7fwVCXJmGCAIgiAIgnoUDU50vLv7I/2fl48P8+dHrZjtFQr1YLplGNSj8ZZAkBfjd/f34u94fX83D4KsGr+LMFwLSEkQZMn4XQbTU2CUAEG1zd8VND0GRm4I5Mn46eY3+7OPn7cuQJBl8yeB4VpASkOgkuZzjJ8UTU+BsQZCGwJZMH9imr5/+Mo+jvD2KxlGCQiU2/ytVT9dMV9ieAqQrYpYAqEFgWqZv2b8XtF0KQxpNWhAICvm7wsYzwFRGgKVNN+K8SkgtCGMQ+fmrx3HWkQunV/KDUWqYb4V4znVkLsSkiqgNfOXjk9SCTGKAsAtOW/mSyFoRBHlip5U8w9Pz9/W/jb/+P5zMBJHqVGUDEDb/MMV42uAiIEgASCKoJgSy2V+zOdjFBObEp8o5+rnHvxBwcjc1XBeCZpVMOaMnlY1LZznpR/cKlD7GXqpkqu/RBzl+gU3eo+eWhC0qkClAnqJnhznPWr/8qm1+q1G0ZZ/4gqw8BSDZUn9SY6gmOz3rv3GXqAGwMJzmy3omo+iCkD86PuUFEE9xo92DGW7EIOMA8h172YudKs6OwDO1S+0Lu5V8Vgz/2fl1Vp69WvsA9X3gFnJNG/RYwZA7/oyGND8b/XG3MfxuvJNVsAsNNO7+WYqQFoNLRhvFkCLJruJoB4FAJUFAJUFAF4BnD+cxH0hrjWFjYe1kgBcPtklbXzRu16ZT8ohgioLADwD6HkfCAr5LwaAfUDfp9F6T7UWdM3H5D2gxxgKSvETBQAxpOvPJgBpDLVeBUF4flv+qfwMTS1Dr9I4bxYAzlVxD3tByPCeWLYLsdYghEznwwYgrYKW9VjjLckl9RJFQRg9EokAxFyYeYcQIo4/25vyS+JEkVcIIbJXhESjBt0WIYQCjTqiK4D7JV4hBGbTJlMNm9ZK0RuEkNAxK0ZJdztb6RlXs3FfUgVw94O1kwlGqqFm10T0DfXeN/QkdM6NE3pHD430jj4J3dNlwvyA1uYHnIQJGjxhhkyrM2TOhSlK68IcsR7miJ0Lk/T+F2ZJ9jZL0mJXrpcep6le6oh5wnZ0xERtezo2OlMegiAIgqChjv4CrGuME3Qq6+UAAAAASUVORK5CYII=">
-                <div class="section-title">Join</div>
-                <h4>Join Room</h4>
-                <p>Enter 4-letter code.</p>
-              </div>
-              <input id="join-input" class="field" placeholder="CODE" maxlength="4" style="text-transform:uppercase">
-              <button class="secondary-btn" id="join-btn">Join Room</button>
+              <div><h4>Join Room</h4></div>
+              <input id="join-input" class="field" placeholder="CODE" maxlength="4" style="text-transform:uppercase;width:90px;min-height:44px;text-align:center;flex-shrink:0">
+              <button class="secondary-btn" id="join-btn" style="width:auto;min-width:80px">Join</button>
             </div>
             <div class="action-card">
-              <div>
-                <img class="mode-icon cue" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAaQAAABQCAYAAABWOAGOAAAB20lEQVR4nO3dsS7FUBzA4V4RMUuZGgtvYHA3b0AsRkNXCR7CAyCxGowWiaeweAN3kTvRmG3kTiIRGm1vzzn9vvmmOcNtfz3/tGmWAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKMfFR53fLXa/FABSj0kbBAkgQeUcQ9IWQQIITBlhTNogSEBnNoq1QV1Yd4qlvpcQtYW+FwAAM4IEQBCM7CBR1eNl7+Oy7b2zvpdARAQJEo0BhOL+6T3L8/zXc6KqqpEgkRwxgDj9GKS31+fad3crq+ujVldE1MQAaBSkw6uLbwE6vb3Lzg/2/31Q5k8IgNgZ2bVADACaiz5IYgCQhsZBEgQAgghSvnXc60MNggiQhuhHdn0HcUYUAZqLPkghEEWAloJ0c3Qy+u97SIQhhCjO2C0Cre6QvOxKzGEURYiTkR3JEUWIkyBBB0QRvuxuLmfXD9M/pyeCBIkKIYpD+2IszfhAHwBBECQAgmBkB3RmMn3pfWw4T5NpO8cpx8UgR52D+rMADEUZWNTqPNQgSAB0HrY6QQKAQe3WAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACDr0yfG1Gpu647icgAAAABJRU5ErkJggg==">
-                <div class="section-title">Solo</div>
-                <h4>Play CPU</h4>
-                <p>Instant solo match.</p>
-              </div>
-              <button class="secondary-btn" id="ai-btn">Play vs AI</button>
+              <div><h4>Play CPU</h4><p>Instant match</p></div>
+              <button class="secondary-btn" id="ai-btn" style="width:auto;min-width:80px">Play</button>
             </div>
           </div>
-          <div class="step-actions">
-            <button class="ghost-btn" id="back-to-players-btn">Back</button>
-          </div>
+          <button class="ghost-btn" id="back-to-players-btn">← Back</button>
           <div id="status-msg" class="status"></div>
         </div>
       </section>
@@ -322,11 +271,7 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
       <section id="step-waiting" class="lobby-step">
         <div class="card step-shell">
           <div class="step-head">
-            <div>
-              <div class="step-meta">Step 3</div>
-              <h3 id="waiting-title">Waiting for opponent</h3>
-            </div>
-            <div class="step-copy">Share code. Match starts on connect.</div>
+            <h3 id="waiting-title">Waiting for opponent</h3>
           </div>
           <div class="room-display">
             <div class="section-title" style="margin-bottom:0">Room Code</div>
@@ -2552,22 +2497,6 @@ function requestRematch() {
 
 $('rb').onclick = requestRematch;
 
-function initLobbyParallax() {
-  const lobby = $('lobby');
-  const cue = $('px-cue');
-  const ball = $('px-ball');
-  const bumper = $('px-bumper');
-  if (!lobby || !cue || !ball || !bumper) return;
-  const render = () => {
-    const t = lobby.scrollTop || 0;
-    cue.style.transform = `translate3d(${t * -.07}px, ${t * .12}px, 0) rotate(-8deg)`;
-    ball.style.transform = `translate3d(${t * .06}px, ${t * .22}px, 0)`;
-    bumper.style.transform = `translate3d(${t * -.05}px, ${t * -.16}px, 0)`;
-  };
-  lobby.addEventListener('scroll', render, { passive:true });
-  render();
-}
-
 (function autoJoin() {
   const params = new URLSearchParams(window.location.search);
   const joinCode = params.get('join');
@@ -2587,7 +2516,6 @@ document.addEventListener('visibilitychange', () => {
 
 resize();
 updateMyProfile();
-initLobbyParallax();
 </script>
 </body>
 </html>

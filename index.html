@@ -40,30 +40,66 @@ h1{
   width:min(100%,760px);background:linear-gradient(180deg,rgba(26,34,48,.96),rgba(12,17,25,.98));
   border:1px solid var(--line);border-radius:22px;box-shadow:0 18px 60px rgba(0,0,0,.4);backdrop-filter:blur(8px)
 }
-#lobby{padding:18px;display:flex;flex-direction:column;gap:14px}
+#lobby{padding:18px;display:flex;flex-direction:column;gap:18px}
 .section-title{font-size:.78rem;color:var(--gold);text-transform:uppercase;letter-spacing:.24em;margin-bottom:8px}
 .hero{
-  border:1px solid rgba(215,177,90,.16);border-radius:18px;padding:18px;
-  background:radial-gradient(circle at top left,rgba(215,177,90,.12),transparent 34%),linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0))
+  border:1px solid rgba(215,177,90,.14);border-radius:24px;padding:22px 20px;
+  background:
+    radial-gradient(circle at top left,rgba(215,177,90,.1),transparent 32%),
+    linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04)
 }
-.hero h2{font-size:1.15rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
-.hero p{color:var(--muted);font-size:.88rem;line-height:1.45}
-.lobby-grid{display:grid;grid-template-columns:1fr;gap:14px}
+.hero-kicker{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:.7rem;color:var(--gold);letter-spacing:.28em;text-transform:uppercase;
+  margin-bottom:10px
+}
+.hero-kicker::before{
+  content:"";width:26px;height:1px;background:linear-gradient(90deg,var(--gold),transparent)
+}
+.hero h2{font-size:clamp(1.4rem,5vw,2rem);letter-spacing:.04em;line-height:1.05;margin-bottom:10px}
+.hero p{color:var(--muted);font-size:.92rem;line-height:1.55;max-width:42ch}
+.lobby-stage{position:relative;min-height:540px;overflow:hidden;border-radius:24px}
+.lobby-step{
+  position:absolute;inset:0;opacity:0;transform:translateX(24px) scale(.985);
+  pointer-events:none;transition:opacity .32s ease,transform .38s cubic-bezier(.2,.8,.2,1)
+}
+.lobby-step.active{position:relative;opacity:1;transform:translateX(0) scale(1);pointer-events:auto}
 .card{
-  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015));
-  border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:14px
+  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.018));
+  border:1px solid rgba(255,255,255,.06);border-radius:22px;padding:18px;
+  box-shadow:0 18px 44px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.02)
 }
-.chips{display:flex;flex-wrap:wrap;gap:8px}
+.step-shell{display:flex;flex-direction:column;gap:16px}
+.step-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.step-meta{font-size:.76rem;color:var(--gold);letter-spacing:.22em;text-transform:uppercase}
+.step-head h3{font-size:1.45rem;font-weight:normal;line-height:1.08}
+.step-copy{color:var(--muted);font-size:.9rem;line-height:1.5;max-width:42ch}
+.player-grid{display:grid;grid-template-columns:1fr;gap:12px}
+.player-card{
+  width:100%;padding:16px 18px;border-radius:20px;text-align:left;cursor:pointer;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+  color:var(--ink);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background .18s ease
+}
+.player-card:active{transform:scale(.99)}
+.player-card.active{
+  border-color:rgba(215,177,90,.45);
+  background:linear-gradient(180deg,rgba(215,177,90,.14),rgba(255,255,255,.03));
+  box-shadow:0 18px 36px rgba(0,0,0,.24),0 0 0 1px rgba(215,177,90,.18)
+}
+.player-name-lg{display:block;font-size:1.18rem;line-height:1.1}
+.player-record{display:block;color:var(--muted);font-size:.88rem;margin-top:8px}
+.player-card.active .player-record{color:#ddceb2}
 .chip,.ghost-btn,.primary-btn,.secondary-btn{
   border:none;border-radius:999px;padding:11px 16px;font:inherit;cursor:pointer;transition:.18s transform,.18s box-shadow,.18s opacity
 }
-.chip{
-  background:rgba(255,255,255,.05);color:var(--ink);border:1px solid rgba(255,255,255,.08);
-  font-size:.92rem
-}
-.chip.active{background:linear-gradient(135deg,var(--gold),#a57b34);color:#1d1508;box-shadow:0 8px 24px rgba(215,177,90,.24)}
-.chip.dim{opacity:.5}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.inline-add{display:none;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.inline-add.show{display:grid}
+.inline-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.step-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.step-actions .primary-btn,.step-actions .secondary-btn,.step-actions .ghost-btn{min-height:48px}
 .field{
   width:100%;background:#0e1420;color:var(--ink);border:1px solid rgba(255,255,255,.1);
   border-radius:14px;padding:12px 14px;font:inherit;outline:none
@@ -76,23 +112,35 @@ h1{
   background:linear-gradient(135deg,var(--gold),#a67d35);color:#201608;font-weight:bold;
   box-shadow:0 10px 28px rgba(215,177,90,.25)
 }
-.mode-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.mode-grid{display:grid;grid-template-columns:1fr;gap:14px}
+.action-card{
+  padding:22px;border-radius:22px;border:1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(circle at top left,rgba(255,255,255,.04),transparent 36%),
+    linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
+  min-height:220px;display:flex;flex-direction:column;justify-content:space-between;gap:16px
+}
+.action-card h4{font-size:1.28rem;font-weight:normal;letter-spacing:.04em}
+.action-card p{color:var(--muted);font-size:.9rem;line-height:1.5;max-width:28ch}
 .mode-card{
   padding:16px;border-radius:18px;border:1px solid rgba(255,255,255,.08);
   background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02))
 }
 .mode-card h3{font-size:1rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
 .mode-card p{color:var(--muted);font-size:.84rem;line-height:1.4;margin-bottom:12px}
+.room-display{
+  padding:24px 18px;border-radius:22px;text-align:center;
+  border:1px solid rgba(215,177,90,.14);
+  background:radial-gradient(circle at center,rgba(215,177,90,.12),rgba(255,255,255,.02) 55%)
+}
 #room-code{
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:2rem;letter-spacing:.35em;
-  color:var(--gold);text-align:center;margin:8px 0 12px;text-shadow:0 0 18px rgba(215,177,90,.34)
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:clamp(2.2rem,11vw,3.6rem);letter-spacing:.3em;
+  color:var(--gold);text-align:center;margin:10px 0 4px;text-shadow:0 0 18px rgba(215,177,90,.28)
 }
 .status{min-height:22px;color:var(--muted);font-size:.84rem}
-.stats-box{
-  border:1px solid rgba(215,177,90,.16);border-radius:16px;padding:12px;
-  background:linear-gradient(180deg,rgba(215,177,90,.08),rgba(255,255,255,.02))
-}
-.stats-box strong{color:var(--gold)}
+.status.center{text-align:center}
+.waiting-copy{color:var(--muted);font-size:.95rem;line-height:1.5;text-align:center;max-width:34ch;margin:0 auto}
+.waiting-spinner{display:flex;justify-content:center;padding-top:6px}
 .muted{color:var(--muted)}
 #game{display:none;flex-direction:column;align-items:center;gap:10px;width:100%}
 #topbar{
@@ -153,8 +201,9 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (min-width:760px){
   #lobby{padding:22px}
-  .lobby-grid{grid-template-columns:1.05fr .95fr}
+  .player-grid{grid-template-columns:1fr 1fr}
   .mode-grid{grid-template-columns:1fr 1fr}
+  .lobby-stage{min-height:470px}
 }
 </style>
 </head>
@@ -164,55 +213,96 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
 
   <div id="lobby" class="panel">
     <div class="hero">
-      <h2>Pick your profile, then create or join a table</h2>
-      <p>Persistent matchup records stay on this device. Your selected name is sent over WebRTC so both sides see the same players and rematch against the right opponent.</p>
+      <div class="hero-kicker">Private Match Flow</div>
+      <h2>Minimal setup. Fast handoff. Premium feel.</h2>
+      <p>Select your player card, create or join a room, and let the opponent identity and records sync automatically once the WebRTC link is live.</p>
     </div>
 
-    <div class="lobby-grid">
-      <div class="card">
-        <div class="section-title">Who Are You?</div>
-        <div id="player-list" class="chips"></div>
-        <div class="row" style="margin-top:10px">
-          <input id="new-player-input" class="field" maxlength="18" placeholder="Add a player name">
-          <button class="primary-btn" id="add-player-btn">Add Player</button>
+    <div class="lobby-stage">
+      <section id="step-player" class="lobby-step active">
+        <div class="card step-shell">
+          <div class="step-head">
+            <div>
+              <div class="step-meta">Step 1</div>
+              <h3>Select your player</h3>
+            </div>
+            <div class="step-copy">Pick an existing profile or add a new one. Records shown here are total wins and losses across all saved matchups.</div>
+          </div>
+          <div id="player-list" class="player-grid"></div>
+          <div class="inline-actions">
+            <button class="ghost-btn" id="show-add-player-btn">Add Player</button>
+          </div>
+          <div id="add-player-inline" class="inline-add">
+            <input id="new-player-input" class="field" maxlength="18" placeholder="Player name">
+            <button class="primary-btn" id="add-player-btn">Save</button>
+          </div>
+          <div id="player-prompt" class="status"></div>
+          <div class="step-actions">
+            <button class="primary-btn" id="continue-btn" style="display:none">Continue</button>
+          </div>
         </div>
-        <div id="player-prompt" class="status"></div>
-      </div>
+      </section>
 
-      <div class="card">
-        <div class="section-title">Matchup</div>
-        <div class="row" style="margin-bottom:10px">
-          <select id="opponent-select" class="field"></select>
+      <section id="step-mode" class="lobby-step">
+        <div class="card step-shell">
+          <div class="step-head">
+            <div>
+              <div class="step-meta">Step 2</div>
+              <h3>Create or join</h3>
+            </div>
+            <div class="step-copy">Creating opens a room instantly. Joining connects to whoever shared the code. The opponent becomes your matchup automatically once connected.</div>
+          </div>
+          <div class="mode-grid">
+            <div class="action-card">
+              <div>
+                <div class="section-title">Create</div>
+                <h4>Open a room</h4>
+                <p>Create a private table, then share the room code or direct link while the room waits for the second player.</p>
+              </div>
+              <button class="primary-btn" id="create-btn">Create Room</button>
+            </div>
+            <div class="action-card">
+              <div>
+                <div class="section-title">Join</div>
+                <h4>Enter a code</h4>
+                <p>Paste or type the four-character room code. Shared links still auto-fill the code on load.</p>
+              </div>
+              <input id="join-input" class="field" placeholder="CODE" maxlength="4" style="text-transform:uppercase">
+              <button class="secondary-btn" id="join-btn">Join Room</button>
+            </div>
+          </div>
+          <div class="step-actions">
+            <button class="ghost-btn" id="back-to-players-btn">Back</button>
+          </div>
+          <div id="status-msg" class="status"></div>
         </div>
-        <div id="lobby-stats" class="stats-box muted">Select yourself to see recent matchup stats.</div>
-      </div>
-    </div>
+      </section>
 
-    <div class="card">
-      <div class="section-title">Play</div>
-      <div class="mode-grid" id="lobby-menu">
-        <div class="mode-card">
-          <h3>Create Game</h3>
-          <p>Host a room, share the code, and wait for your opponent to connect.</p>
-          <button class="primary-btn" id="create-btn">Create Room</button>
+      <section id="step-waiting" class="lobby-step">
+        <div class="card step-shell">
+          <div class="step-head">
+            <div>
+              <div class="step-meta">Step 3</div>
+              <h3 id="waiting-title">Waiting for opponent</h3>
+            </div>
+            <div class="step-copy">Share the room and keep this screen open. Once the connection is established the game begins automatically.</div>
+          </div>
+          <div class="room-display">
+            <div class="section-title" style="margin-bottom:0">Room Code</div>
+            <div id="room-code">----</div>
+            <p class="waiting-copy" id="waiting-copy">Your private room is live. Send the link or code to the other player.</p>
+          </div>
+          <div id="host-share-actions" class="row" style="justify-content:center">
+            <button class="primary-btn" id="copy-btn">Copy Link</button>
+            <button class="secondary-btn" id="share-btn">Share</button>
+          </div>
+          <div class="waiting-spinner"><div class="spinner"></div></div>
+          <div id="waiting-conn" class="status center"></div>
+          <div class="step-actions">
+            <button class="ghost-btn" id="back-to-mode-btn">Back</button>
+          </div>
         </div>
-        <div class="mode-card">
-          <h3>Join Game</h3>
-          <p>Enter a four-character code or use a shared link.</p>
-          <input id="join-input" class="field" placeholder="CODE" maxlength="4" style="text-transform:uppercase;margin-bottom:10px">
-          <button class="secondary-btn" id="join-btn">Join Room</button>
-        </div>
-      </div>
-
-      <div id="lobby-waiting" style="display:none">
-        <div class="section-title">Room</div>
-        <div id="room-code">----</div>
-        <div class="row" style="justify-content:center">
-          <button class="primary-btn" id="copy-btn">Copy Link</button>
-          <button class="secondary-btn" id="share-btn">Share</button>
-        </div>
-        <div id="status-msg" class="status" style="text-align:center;margin-top:12px"></div>
-      </div>
+      </section>
     </div>
   </div>
 
@@ -380,7 +470,8 @@ const Confetti = {
 
 let profiles = loadProfiles();
 let selectedPlayer = profiles.lastPlayer || profiles.players[0] || '';
-let selectedOpponent = '';
+let lobbyStep = 'player';
+let addPlayerOpen = false;
 let playerProfiles = { p1: { name: 'Player 1' }, p2: { name: 'Player 2' } };
 let resultRecorded = false;
 
@@ -401,13 +492,38 @@ function normalizeName(name) {
   return name.trim().replace(/\s+/g, ' ').slice(0, 18);
 }
 
+function getPlayerTotals(name) {
+  let wins = 0;
+  let losses = 0;
+  Object.values(profiles.matches).forEach(record => {
+    wins += record[name] || 0;
+    Object.entries(record).forEach(([player, count]) => {
+      if (player !== name && Object.prototype.hasOwnProperty.call(record, name)) losses += count || 0;
+    });
+  });
+  return { wins, losses };
+}
+
+function setLobbyStep(step) {
+  lobbyStep = step;
+  ['player', 'mode', 'waiting'].forEach(name => {
+    $('step-' + name).classList.toggle('active', name === step);
+  });
+}
+
+function toggleAddPlayer(show = !addPlayerOpen) {
+  addPlayerOpen = show;
+  $('add-player-inline').classList.toggle('show', show);
+  $('show-add-player-btn').textContent = show ? 'Cancel' : 'Add Player';
+  if (show) $('new-player-input').focus();
+  else $('new-player-input').value = '';
+}
+
 function setSelectedPlayer(name) {
   selectedPlayer = name;
   profiles.lastPlayer = name;
   saveProfiles();
-  renderPlayerChips();
-  renderOpponentSelect();
-  updateLobbyStats();
+  renderPlayerCards();
   updatePlayerPrompt();
   if (connected) sendProfile();
 }
@@ -419,40 +535,22 @@ function addPlayer() {
   profiles.players.push(value);
   profiles.players.sort((a, b) => a.localeCompare(b));
   saveProfiles();
-  $('new-player-input').value = '';
   setSelectedPlayer(value);
+  toggleAddPlayer(false);
   $('player-prompt').textContent = 'Player added.';
 }
 
-function renderPlayerChips() {
+function renderPlayerCards() {
   const box = $('player-list');
   box.innerHTML = '';
   profiles.players.forEach(name => {
     const btn = document.createElement('button');
-    btn.className = 'chip' + (name === selectedPlayer ? ' active' : '');
-    btn.textContent = name;
+    const totals = getPlayerTotals(name);
+    btn.className = 'player-card' + (name === selectedPlayer ? ' active' : '');
+    btn.innerHTML = `<span class="player-name-lg">${name}</span><span class="player-record">${totals.wins} wins • ${totals.losses} losses</span>`;
     btn.onclick = () => setSelectedPlayer(name);
     box.appendChild(btn);
   });
-}
-
-function renderOpponentSelect() {
-  const sel = $('opponent-select');
-  const prev = selectedOpponent;
-  const others = profiles.players.filter(name => name !== selectedPlayer);
-  sel.innerHTML = '';
-  const opt = document.createElement('option');
-  opt.value = '';
-  opt.textContent = 'Choose opponent for local stats';
-  sel.appendChild(opt);
-  others.forEach(name => {
-    const item = document.createElement('option');
-    item.value = name;
-    item.textContent = name;
-    sel.appendChild(item);
-  });
-  selectedOpponent = others.includes(prev) ? prev : '';
-  sel.value = selectedOpponent;
 }
 
 function matchupKey(a, b) {
@@ -478,36 +576,52 @@ function recordMatchWin(winner, loser) {
   record[loser] = record[loser] || 0;
   profiles.matches[key] = record;
   saveProfiles();
+  renderPlayerCards();
 }
 
 function matchupSummary(a, b) {
   const stats = getMatchupRecord(a, b);
-  if (!stats) return 'Pick two different players to track the matchup.';
+  if (!stats) return 'Matchup stats appear once both players are known.';
   if (!stats.total) return `<strong>${a}</strong> vs <strong>${b}</strong><br>No games recorded yet.`;
   return `<strong>${a}</strong> vs <strong>${b}</strong><br>${stats.aWins}-${stats.bWins} for ${a} (${stats.pct.toFixed(1)}%)`;
 }
 
-function updateLobbyStats(remoteName) {
-  const opponent = remoteName || selectedOpponent;
-  $('lobby-stats').innerHTML = selectedPlayer && opponent ? matchupSummary(selectedPlayer, opponent) : 'Select yourself and an opponent to preview local matchup history.';
+function updateWinStats() {
+  if (!over) return;
+  const winnerName = $('wt').textContent.replace(/ Wins$/, '');
+  const loserName = [roleName('p1'), roleName('p2')].find(name => name !== winnerName);
+  if (winnerName && loserName) $('win-stats').innerHTML = matchupSummary(winnerName, loserName);
 }
 
 function updatePlayerPrompt() {
-  $('player-prompt').textContent = selectedPlayer ? `Current player: ${selectedPlayer}` : 'Select or add a player to continue.';
+  $('player-prompt').textContent = selectedPlayer ? `Selected player: ${selectedPlayer}` : 'Select or add a player to continue.';
+  $('continue-btn').style.display = selectedPlayer ? 'inline-flex' : 'none';
 }
 
-renderPlayerChips();
-renderOpponentSelect();
-updateLobbyStats();
+renderPlayerCards();
 updatePlayerPrompt();
 
-$('opponent-select').addEventListener('change', e => {
-  selectedOpponent = e.target.value;
-  updateLobbyStats();
-  if (connected) sendProfile();
-});
+$('show-add-player-btn').addEventListener('click', () => toggleAddPlayer());
 $('add-player-btn').addEventListener('click', addPlayer);
 $('new-player-input').addEventListener('keydown', e => { if (e.key === 'Enter') addPlayer(); });
+$('continue-btn').addEventListener('click', () => { if (ensurePlayerSelected()) setLobbyStep('mode'); });
+$('back-to-players-btn').addEventListener('click', () => setLobbyStep('player'));
+$('back-to-mode-btn').addEventListener('click', () => {
+  if (peer && !peer.destroyed) { try { peer.destroy(); } catch (e) {} }
+  peer = null;
+  conn = null;
+  connected = false;
+  isHost = false;
+  myRole = null;
+  scoreSyncSent = false;
+  stopHeartbeat();
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+  reconnectTimer = null;
+  currentCode = '';
+  setStatus('');
+  history.replaceState(null, '', window.location.pathname);
+  setLobbyStep('mode');
+});
 
 let peer, conn, isHost = false, myRole = null;
 let connected = false;
@@ -521,6 +635,7 @@ let connQuality = 'green';
 let gameStarted = false;
 let msgQueue = [];
 let syncTimer = null;
+let scoreSyncSent = false;
 const MAX_RECONNECT = 10;
 
 function genCode() {
@@ -530,7 +645,10 @@ function genCode() {
   return out;
 }
 
-function setStatus(html) { $('status-msg').innerHTML = html; }
+function setStatus(html) {
+  $('status-msg').innerHTML = html;
+  $('waiting-conn').innerHTML = html;
+}
 
 function ensurePlayerSelected() {
   if (selectedPlayer) return true;
@@ -553,9 +671,52 @@ function sendProfile() {
   send({
     type: 'profile',
     role: myRole,
-    name: playerProfiles[myRole].name,
-    expectedOpponent: selectedOpponent || ''
+    name: playerProfiles[myRole].name
   });
+}
+
+function sendScoreSync() {
+  if (scoreSyncSent) return;
+  scoreSyncSent = send({
+    type: 'score-sync',
+    matches: profiles.matches
+  }) || scoreSyncSent;
+}
+
+function mergeScoreDatabase(remoteMatches) {
+  let changed = false;
+  const merged = { ...profiles.matches };
+  Object.entries(remoteMatches || {}).forEach(([key, remoteRecord]) => {
+    const localRecord = merged[key];
+    if (!localRecord) {
+      merged[key] = { ...remoteRecord };
+      changed = true;
+      return;
+    }
+    const nextRecord = { ...localRecord };
+    Object.keys({ ...localRecord, ...remoteRecord }).forEach(player => {
+      const nextValue = Math.max(localRecord[player] || 0, remoteRecord[player] || 0);
+      if ((nextRecord[player] || 0) !== nextValue) {
+        nextRecord[player] = nextValue;
+        changed = true;
+      }
+    });
+    merged[key] = nextRecord;
+  });
+  if (!changed) return;
+  profiles.matches = merged;
+  saveProfiles();
+  renderPlayerCards();
+  updateScoreboard();
+  updateWinStats();
+}
+
+function showWaitingStep(title, copy, showShare = false) {
+  $('waiting-title').textContent = title;
+  $('waiting-copy').textContent = copy;
+  $('host-share-actions').style.display = showShare ? 'flex' : 'none';
+  $('room-code').textContent = currentCode || '----';
+  setLobbyStep('waiting');
 }
 
 function createGame() {
@@ -565,10 +726,9 @@ function createGame() {
   isHost = true;
   myRole = 'p1';
   connected = false;
+  scoreSyncSent = false;
   updateMyProfile();
-  $('lobby-menu').style.display = 'none';
-  $('lobby-waiting').style.display = 'block';
-  $('room-code').textContent = currentCode;
+  showWaitingStep('Waiting for opponent', 'Your private room is live. Send the link or code to the other player.', true);
   setStatus('Creating room...');
   history.replaceState(null, '', '?host=' + currentCode);
   initPeerAsHost();
@@ -583,10 +743,9 @@ function joinGame() {
   isHost = false;
   myRole = 'p2';
   connected = false;
+  scoreSyncSent = false;
   updateMyProfile();
-  $('lobby-menu').style.display = 'none';
-  $('lobby-waiting').style.display = 'block';
-  $('room-code').textContent = currentCode;
+  showWaitingStep('Joining room', 'Connecting to the host and waiting for the handshake to complete.', false);
   setStatus('Connecting...');
   initPeerAsGuest();
 }
@@ -648,14 +807,14 @@ function initPeerAsGuest() {
 
 function resetLobbyMenuSoon() {
   setTimeout(() => {
-    $('lobby-menu').style.display = 'grid';
-    $('lobby-waiting').style.display = 'none';
+    setLobbyStep('mode');
   }, 1500);
 }
 
 function setupConn() {
   conn.on('open', () => {
     connected = true;
+    scoreSyncSent = false;
     reconnectAttempts = 0;
     lastPong = Date.now();
     hideDisconnectOverlay();
@@ -669,6 +828,7 @@ function setupConn() {
   conn.on('data', handleMessage);
   conn.on('close', () => {
     connected = false;
+    scoreSyncSent = false;
     stopHeartbeat();
     if (gameStarted) {
       showDisconnectOverlay();
@@ -684,7 +844,7 @@ function send(msg) {
   if (conn && conn.open && connected) {
     try { conn.send(msg); return true; } catch(e) {}
   }
-  if (['shot','break-aim','state-sync','profile','aim-start','aim-end','rematch-request','rematch-start'].includes(msg.type)) {
+  if (['shot','break-aim','state-sync','profile','score-sync','aim-start','aim-end','rematch-request','rematch-start'].includes(msg.type)) {
     msgQueue.push({ msg, time: Date.now() });
     msgQueue = msgQueue.filter(item => Date.now() - item.time < 10000);
   }
@@ -1026,7 +1186,11 @@ function handleMessage(data) {
     case 'profile':
       playerProfiles[data.role] = { name: data.name || (data.role === 'p1' ? 'Player 1' : 'Player 2') };
       updateScoreboard();
-      updateLobbyStats(data.role === myRole ? selectedOpponent : data.name);
+      sendScoreSync();
+      updateWinStats();
+      break;
+    case 'score-sync':
+      mergeScoreDatabase(data.matches);
       break;
     case 'shot': {
       const b = balls[data.ballIdx];

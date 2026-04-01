@@ -999,7 +999,7 @@ const H = 630;
 const RAIL = 30;
 const IL = RAIL, IR = W - RAIL, IT = RAIL, IB = H - RAIL;
 const CX = W / 2, CY = H / 2;
-const BR = 12, BPR = 16, PR = 22, PSINK = 19;
+const BR = 14, BPR = 16, PR = 22, PSINK = 19;
 const FRICTION = .986;
 const RAIL_RESTITUTION = .68;
 const BUMPER_RESTITUTION = .78;
@@ -1043,9 +1043,9 @@ const POCKETS = [
 // Vertical arm (in line with pockets): red, white, gap, white, red
 // Horizontal arm: white, red, gap, red, white
 const BUMPERS = [
-  // Pocket bumpers (2 flanking each pocket — same color per pocket)
-  { x: CX - 34, y: IT + 16, col: 'white' }, { x: CX + 34, y: IT + 16, col: 'white' },
-  { x: CX - 34, y: IB - 16, col: 'red' }, { x: CX + 34, y: IB - 16, col: 'red' },
+  // Pocket bumpers (2 flanking each pocket — pulled back from entrance)
+  { x: CX - 38, y: IT + 10, col: 'white' }, { x: CX + 38, y: IT + 10, col: 'white' },
+  { x: CX - 38, y: IB - 10, col: 'red' }, { x: CX + 38, y: IB - 10, col: 'red' },
   // Center cross — vertical arm (scaled for taller table)
   { x: CX, y: CY - 80, col: 'red' }, { x: CX, y: CY - 40, col: 'white' },
   { x: CX, y: CY + 40, col: 'white' }, { x: CX, y: CY + 80, col: 'red' },

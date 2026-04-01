@@ -66,9 +66,9 @@ h1{display:none}
 .hero-kicker::before{
   content:"";width:26px;height:1px;background:linear-gradient(90deg,var(--gold),transparent)
 }
-.hero h2{font-size:clamp(1.3rem,4.4vw,1.85rem);letter-spacing:.03em;line-height:1.06;margin-bottom:6px}
-.hero p{color:var(--muted);font-size:.84rem;line-height:1.45;max-width:38ch}
-.lobby-stage{position:relative;min-height:500px;overflow:hidden;border-radius:24px;z-index:1;scroll-snap-align:start}
+.hero h2{font-size:clamp(1.5rem,5vw,2.2rem);letter-spacing:.02em;line-height:1.02;margin-bottom:6px}
+.hero p{color:var(--muted);font-size:.8rem;line-height:1.35;max-width:30ch}
+.lobby-stage{position:relative;min-height:560px;overflow:hidden;border-radius:24px;z-index:1;scroll-snap-align:start}
 .lobby-step{
   position:absolute;inset:0;opacity:0;transform:translateX(24px) scale(.985);
   pointer-events:none;transition:opacity .32s ease,transform .38s cubic-bezier(.2,.8,.2,1)
@@ -83,7 +83,7 @@ h1{display:none}
 .step-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
 .step-meta{font-size:.68rem;color:var(--gold);letter-spacing:.2em;text-transform:uppercase}
 .step-head h3{font-size:1.2rem;font-weight:normal;line-height:1.08}
-.step-copy{color:var(--muted);font-size:.8rem;line-height:1.35;max-width:34ch}
+.step-copy{display:none}
 .player-grid{display:grid;grid-template-columns:1fr;gap:12px}
 .player-card{
   width:100%;padding:16px 18px;border-radius:20px;text-align:left;cursor:pointer;
@@ -123,14 +123,16 @@ h1{display:none}
 }
 .mode-grid{display:grid;grid-template-columns:1fr;gap:14px}
 .action-card{
-  padding:22px;border-radius:22px;border:1px solid rgba(255,255,255,.08);
+  padding:20px;border-radius:22px;border:1px solid rgba(255,255,255,.08);
   background:
-    radial-gradient(circle at top left,rgba(255,255,255,.04),transparent 36%),
-    linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
-  min-height:220px;display:flex;flex-direction:column;justify-content:space-between;gap:16px
+    radial-gradient(circle at top left,rgba(255,255,255,.05),transparent 38%),
+    linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+  min-height:180px;display:flex;flex-direction:column;justify-content:space-between;gap:12px
 }
-.action-card h4{font-size:1.28rem;font-weight:normal;letter-spacing:.04em}
-.action-card p{color:var(--muted);font-size:.9rem;line-height:1.5;max-width:28ch}
+.action-card h4{font-size:1.35rem;font-weight:normal;letter-spacing:.02em}
+.action-card p{color:var(--muted);font-size:.78rem;line-height:1.35;max-width:24ch}
+.mode-icon{width:34px;height:34px;opacity:.95;filter:drop-shadow(0 6px 12px rgba(0,0,0,.35));margin-bottom:6px;object-fit:contain}
+.mode-icon.cue{width:92px;height:22px}
 .mode-card{
   padding:16px;border-radius:18px;border:1px solid rgba(107,66,38,.2);
   background:linear-gradient(180deg,rgba(27,53,40,.25),rgba(20,40,30,.12))
@@ -279,6 +281,7 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
           <div class="mode-grid">
             <div class="action-card">
               <div>
+                <img class="mode-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAC3UlEQVR4nO2du1LDMBBFJQ1VGn8LFY0r6rR8JW1qKjVUfIubtDAUmWGCreixq92V7m2ZgHOOVpLjoHUOQRAEmTXeGcnlI36Xvub8uqp/f34U2Fal+Bmga5bhZ4OuTYa3An59eS7+O/HzS70IrxX8WgGcUkgvEV4L+JUBOIUQbhFeGv4qAL5UBKcELwVfA/gSEVwSWH6pNfCSInwv+BbA54qglBAcYUaCn7puyvsXMgGjwe8lgaSU9i7GOvjcKal1OmqugFngH72v1kpoEjATfC4JXgP85XR6P/rZdr2+uYGnIy8Jf0mAtyCCQgLJLqgU/i/4Evi1r+EOxXRbLKB10WmFuCiT0Mon9Jx6qOAtiiS0LsrBGvzRJFSvAaNvN3vxCBbmfQtVUMutqgIw+um4BKujf5QqKK4AjH5aPsHK93YsJ8WxqAIw+uk5kT4RQ8oTcssGo78s97yOpiFUgHDYBXB/jLwp/Ji6WQB2PzzZ45pVAa3zP9co3ZSP/hxuWAOE000A9WjdlI/+3HStACpo2yDwdwVw7/9b4W3G4D+6H3hyArlBXIx/K4IiIgJKRGyDglchYBbIqWAbKhwIEA4ECAcChAMBwoEA4UCAcCBAOBCgTcD9f3jUHPmCHPO754sKEA4ECAcCLAjAOlCXHG5B62mCI2aPK6Yg4UCAVgG4H+Dd/9+CChBOkQDshug5JQVgN0STFMfiKQhVQMvnoQBUQVse8atahFEFdFyyBKAK6pLDrXobiiqg4RFabEJC+9FlRRUACfTnxhVPQVgP0hE5tG/WqSgSvO8qAZiKHNm5odUVMLOESHiGdNMUNKOESHyAd/MaMJOEyHB6Otmz31H7B3B30iB7IHN0MdarITK3MSF9IjaahNihhwy6KI3WRclyO6s4Sh+xv0EnvXTQS3L0XpJ/g26q/4N+wjP1E9Z8Nt15po7ae7mgp7yeXBhlaHugpOpiqKVog40gCOJ05QcGTaUZBfF0jQAAAABJRU5ErkJggg==">
                 <div class="section-title">Create</div>
                 <h4>Host Room</h4>
                 <p>Get a code. Share. Play.</p>
@@ -287,6 +290,7 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
             </div>
             <div class="action-card">
               <div>
+                <img class="mode-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAADcUlEQVR4nO2dMW7bQBBFOURaFwbcGMgpfAgVuoBaH0MxXAaJj8GWF9jCh/ApArgxkMIHSJoIUARSnNmd3Z3Z/b+1DJH/7fwVCXJmGCAIgiAIgnoUDU50vLv7I/2fl48P8+dHrZjtFQr1YLplGNSj8ZZAkBfjd/f34u94fX83D4KsGr+LMFwLSEkQZMn4XQbTU2CUAEG1zd8VND0GRm4I5Mn46eY3+7OPn7cuQJBl8yeB4VpASkOgkuZzjJ8UTU+BsQZCGwJZMH9imr5/+Mo+jvD2KxlGCQiU2/ytVT9dMV9ieAqQrYpYAqEFgWqZv2b8XtF0KQxpNWhAICvm7wsYzwFRGgKVNN+K8SkgtCGMQ+fmrx3HWkQunV/KDUWqYb4V4znVkLsSkiqgNfOXjk9SCTGKAsAtOW/mSyFoRBHlip5U8w9Pz9/W/jb/+P5zMBJHqVGUDEDb/MMV42uAiIEgASCKoJgSy2V+zOdjFBObEp8o5+rnHvxBwcjc1XBeCZpVMOaMnlY1LZznpR/cKlD7GXqpkqu/RBzl+gU3eo+eWhC0qkClAnqJnhznPWr/8qm1+q1G0ZZ/4gqw8BSDZUn9SY6gmOz3rv3GXqAGwMJzmy3omo+iCkD86PuUFEE9xo92DGW7EIOMA8h172YudKs6OwDO1S+0Lu5V8Vgz/2fl1Vp69WvsA9X3gFnJNG/RYwZA7/oyGND8b/XG3MfxuvJNVsAsNNO7+WYqQFoNLRhvFkCLJruJoB4FAJUFAJUFAF4BnD+cxH0hrjWFjYe1kgBcPtklbXzRu16ZT8ohgioLADwD6HkfCAr5LwaAfUDfp9F6T7UWdM3H5D2gxxgKSvETBQAxpOvPJgBpDLVeBUF4flv+qfwMTS1Dr9I4bxYAzlVxD3tByPCeWLYLsdYghEznwwYgrYKW9VjjLckl9RJFQRg9EokAxFyYeYcQIo4/25vyS+JEkVcIIbJXhESjBt0WIYQCjTqiK4D7JV4hBGbTJlMNm9ZK0RuEkNAxK0ZJdztb6RlXs3FfUgVw94O1kwlGqqFm10T0DfXeN/QkdM6NE3pHD430jj4J3dNlwvyA1uYHnIQJGjxhhkyrM2TOhSlK68IcsR7miJ0Lk/T+F2ZJ9jZL0mJXrpcep6le6oh5wnZ0xERtezo2OlMegiAIgqChjv4CrGuME3Qq6+UAAAAASUVORK5CYII=">
                 <div class="section-title">Join</div>
                 <h4>Join Room</h4>
                 <p>Enter 4-letter code.</p>
@@ -296,6 +300,7 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
             </div>
             <div class="action-card">
               <div>
+                <img class="mode-icon cue" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAaQAAABQCAYAAABWOAGOAAAB20lEQVR4nO3dsS7FUBzA4V4RMUuZGgtvYHA3b0AsRkNXCR7CAyCxGowWiaeweAN3kTvRmG3kTiIRGm1vzzn9vvmmOcNtfz3/tGmWAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKMfFR53fLXa/FABSj0kbBAkgQeUcQ9IWQQIITBlhTNogSEBnNoq1QV1Yd4qlvpcQtYW+FwAAM4IEQBCM7CBR1eNl7+Oy7b2zvpdARAQJEo0BhOL+6T3L8/zXc6KqqpEgkRwxgDj9GKS31+fad3crq+ujVldE1MQAaBSkw6uLbwE6vb3Lzg/2/31Q5k8IgNgZ2bVADACaiz5IYgCQhsZBEgQAgghSvnXc60MNggiQhuhHdn0HcUYUAZqLPkghEEWAloJ0c3Qy+u97SIQhhCjO2C0Cre6QvOxKzGEURYiTkR3JEUWIkyBBB0QRvuxuLmfXD9M/pyeCBIkKIYpD+2IszfhAHwBBECQAgmBkB3RmMn3pfWw4T5NpO8cpx8UgR52D+rMADEUZWNTqPNQgSAB0HrY6QQKAQe3WAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACDr0yfG1Gpu647icgAAAABJRU5ErkJggg==">
                 <div class="section-title">Solo</div>
                 <h4>Play CPU</h4>
                 <p>Instant solo match.</p>

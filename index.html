@@ -1006,7 +1006,7 @@ const BUMPER_RESTITUTION = .85;
 const BALL_RESTITUTION = .92;
 const STOP_EPS = .06;
 const MAX_SHOT_POWER = 18;
-const CUE_PREVIEW_LEN = 300;
+const CUE_PREVIEW_LEN = 140;
 const TURN_GLOW = { p1: 'turn-red', p2: 'turn-white', break: 'break-mode' };
 
 let sc = 1;
@@ -1043,9 +1043,9 @@ const POCKETS = [
 // Vertical arm (in line with pockets): red, white, gap, white, red
 // Horizontal arm: white, red, gap, red, white
 const BUMPERS = [
-  // Pocket bumpers (2 flanking each pocket — offset further from pocket mouth)
-  { x: CX - 30, y: IT + 32, col: 'red' }, { x: CX + 30, y: IT + 32, col: 'white' },
-  { x: CX - 30, y: IB - 32, col: 'white' }, { x: CX + 30, y: IB - 32, col: 'red' },
+  // Pocket bumpers (2 flanking each pocket — tight to pocket mouth)
+  { x: CX - 28, y: IT + 22, col: 'red' }, { x: CX + 28, y: IT + 22, col: 'white' },
+  { x: CX - 28, y: IB - 22, col: 'white' }, { x: CX + 28, y: IB - 22, col: 'red' },
   // Center cross — vertical arm (scaled for taller table)
   { x: CX, y: CY - 80, col: 'red' }, { x: CX, y: CY - 40, col: 'white' },
   { x: CX, y: CY + 40, col: 'white' }, { x: CX, y: CY + 80, col: 'red' },
@@ -1102,26 +1102,30 @@ function freshTurnMeta(actor = null) {
 }
 
 function rackBalls() {
-  // Regulation: marked ball in front of own pocket, 2 balls on each side behind
-  // Gap in the middle so the two pairs flank the marked ball's column
-  const gap = 26;        // spacing between balls in each pair
-  const frontOffset = 42; // marked ball distance from pocket
-  const rowOffset = 30;   // how far back the 4 flanking balls sit
+  // Regulation: marked ball directly in front of own pocket
+  // Other 4 balls in two pairs flanking the pocket bumpers on the OUTSIDE
+  // This keeps the center lane clear for the break shot
+  const frontOffset = 38; // marked ball distance from pocket rail
+  const pairGap = 26;     // spacing between balls in each pair
+  // Pocket bumpers are at CX±28; balls go outside them
+  const innerX = 56;      // first ball offset from center (outside bumper)
+  const outerX = innerX + pairGap; // second ball further out
+  const pairY = 28;       // pair vertical offset from rail (same height as pocket bumpers)
   const p1y = IB - frontOffset;
   const p2y = IT + frontOffset;
   return [
-    // Red balls — P1 home is bottom pocket, shoots toward top
+    // Red balls — P1 home is bottom pocket
     mk(CX, p1y, '#c92b2b', 'p1', true),                           // marked, centered
-    mk(CX - gap, p1y - rowOffset, '#b81f1f', 'p1', false),        // left inner
-    mk(CX - gap * 2, p1y - rowOffset, '#b81f1f', 'p1', false),   // left outer
-    mk(CX + gap, p1y - rowOffset, '#b81f1f', 'p1', false),        // right inner
-    mk(CX + gap * 2, p1y - rowOffset, '#b81f1f', 'p1', false),   // right outer
-    // White balls — P2 home is top pocket, shoots toward bottom
+    mk(CX - innerX, IB - pairY, '#b81f1f', 'p1', false),         // left inner
+    mk(CX - outerX, IB - pairY, '#b81f1f', 'p1', false),         // left outer
+    mk(CX + innerX, IB - pairY, '#b81f1f', 'p1', false),         // right inner
+    mk(CX + outerX, IB - pairY, '#b81f1f', 'p1', false),         // right outer
+    // White balls — P2 home is top pocket
     mk(CX, p2y, '#eceef2', 'p2', true),                           // marked, centered
-    mk(CX - gap, p2y + rowOffset, '#dadfe7', 'p2', false),        // left inner
-    mk(CX - gap * 2, p2y + rowOffset, '#dadfe7', 'p2', false),   // left outer
-    mk(CX + gap, p2y + rowOffset, '#dadfe7', 'p2', false),        // right inner
-    mk(CX + gap * 2, p2y + rowOffset, '#dadfe7', 'p2', false),   // right outer
+    mk(CX - innerX, IT + pairY, '#dadfe7', 'p2', false),         // left inner
+    mk(CX - outerX, IT + pairY, '#dadfe7', 'p2', false),         // left outer
+    mk(CX + innerX, IT + pairY, '#dadfe7', 'p2', false),         // right inner
+    mk(CX + outerX, IT + pairY, '#dadfe7', 'p2', false),         // right outer
   ];
 }
 
@@ -2164,43 +2168,23 @@ function rayToBall(ball, dx, dy, limit = CUE_PREVIEW_LEN) {
 function cuePreview(ball, angle) {
   const dx = Math.cos(angle);
   const dy = Math.sin(angle);
+  const start = { x:ball.x + dx * (BR + 2), y:ball.y + dy * (BR + 2) };
+  // Single segment only — stop at first ball, rail, or max length
   const firstBall = rayToBall(ball, dx, dy);
   const firstRail = rayToRail(ball.x, ball.y, dx, dy);
-  const segments = [];
-  const start = { x:ball.x + dx * (BR + 2), y:ball.y + dy * (BR + 2) };
+  let endX = start.x + dx * CUE_PREVIEW_LEN;
+  let endY = start.y + dy * CUE_PREVIEW_LEN;
+  let collision = null;
   if (firstBall && (!firstRail || firstBall.t < firstRail.t)) {
-    const hitX = ball.x + dx * firstBall.t;
-    const hitY = ball.y + dy * firstBall.t;
-    segments.push({ x1:start.x, y1:start.y, x2:hitX, y2:hitY });
-    const nx = (firstBall.ball.x - hitX) / (Math.hypot(firstBall.ball.x - hitX, firstBall.ball.y - hitY) || 1);
-    const ny = (firstBall.ball.y - hitY) / (Math.hypot(firstBall.ball.x - hitX, firstBall.ball.y - hitY) || 1);
-    return {
-      segments,
-      collision:{ x:hitX, y:hitY },
-      secondary:{ x1:firstBall.ball.x, y1:firstBall.ball.y, x2:firstBall.ball.x + nx * 72, y2:firstBall.ball.y + ny * 72 }
-    };
+    endX = ball.x + dx * firstBall.t;
+    endY = ball.y + dy * firstBall.t;
+    collision = { x:endX, y:endY };
+  } else if (firstRail) {
+    endX = ball.x + dx * firstRail.t;
+    endY = ball.y + dy * firstRail.t;
+    collision = { x:endX, y:endY };
   }
-  if (firstRail) {
-    const hitX = ball.x + dx * firstRail.t;
-    const hitY = ball.y + dy * firstRail.t;
-    segments.push({ x1:start.x, y1:start.y, x2:hitX, y2:hitY });
-    const dot = dx * firstRail.nx + dy * firstRail.ny;
-    const rx = dx - 2 * dot * firstRail.nx;
-    const ry = dy - 2 * dot * firstRail.ny;
-    const remaining = CUE_PREVIEW_LEN - firstRail.t;
-    segments.push({ x1:hitX, y1:hitY, x2:hitX + rx * remaining, y2:hitY + ry * remaining });
-    const reflectedBall = rayToBall({ x:hitX, y:hitY }, rx, ry, remaining);
-    if (reflectedBall) {
-      const impactX = hitX + rx * reflectedBall.t;
-      const impactY = hitY + ry * reflectedBall.t;
-      segments[1].x2 = impactX;
-      segments[1].y2 = impactY;
-      return { segments, collision:{ x:impactX, y:impactY } };
-    }
-    return { segments, collision:{ x:hitX, y:hitY } };
-  }
-  segments.push({ x1:start.x, y1:start.y, x2:start.x + dx * CUE_PREVIEW_LEN, y2:start.y + dy * CUE_PREVIEW_LEN });
-  return { segments };
+  return { segments:[{ x1:start.x, y1:start.y, x2:endX, y2:endY }], collision };
 }
 
 function drawCueActor(ball, angle, power, alpha = 1) {
@@ -2231,13 +2215,6 @@ function drawCueActor(ball, angle, power, alpha = 1) {
     Xx.stroke();
   });
   Xx.setLineDash([]);
-  if (preview.secondary) {
-    Xx.strokeStyle = ball.pl === 'p1' ? 'rgba(255,178,178,.7)' : 'rgba(180,212,255,.7)';
-    Xx.beginPath();
-    Xx.moveTo(preview.secondary.x1, preview.secondary.y1);
-    Xx.lineTo(preview.secondary.x2, preview.secondary.y2);
-    Xx.stroke();
-  }
   if (preview.collision) {
     Xx.beginPath();
     Xx.arc(preview.collision.x, preview.collision.y, 4.5, 0, Math.PI * 2);

@@ -1043,9 +1043,9 @@ const POCKETS = [
 // Vertical arm (in line with pockets): red, white, gap, white, red
 // Horizontal arm: white, red, gap, red, white
 const BUMPERS = [
-  // Pocket bumpers (regulation: ~3.5" from center, ~2.5" from rail)
-  { x: CX - 39, y: IT + 28, col: 'white' }, { x: CX + 39, y: IT + 28, col: 'white' },
-  { x: CX - 39, y: IB - 28, col: 'red' }, { x: CX + 39, y: IB - 28, col: 'red' },
+  // Pocket bumpers (regulation: ~3.5" from center, ~1.5" from rail)
+  { x: CX - 39, y: IT + 18, col: 'white' }, { x: CX + 39, y: IT + 18, col: 'white' },
+  { x: CX - 39, y: IB - 18, col: 'red' }, { x: CX + 39, y: IB - 18, col: 'red' },
   // Center cross — symmetric square pattern (same spacing both arms)
   // Vertical arm
   { x: CX, y: CY - 90, col: 'red' }, { x: CX, y: CY - 45, col: 'white' },
@@ -1118,7 +1118,7 @@ function rackBalls() {
   const x2 = innerL;                // inner left
   const x3 = innerR;                // inner right
   const x4 = innerR + ballSpacing;  // outer right
-  const pairY = 28;       // pair vertical offset from rail (same height as pocket bumpers)
+  const pairY = 38;       // pair vertical offset from rail (behind pocket bumpers)
   const p1y = IB - frontOffset;
   const p2y = IT + frontOffset;
   return [

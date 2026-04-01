@@ -1259,8 +1259,7 @@ function updateTurnUI() {
   if (over) return;
   if (phase === 'break') {
     $('turn-label').textContent = brk[myRole] ? 'Waiting On Break' : 'Simultaneous Break';
-    const outsideRail = myRole === 'p1' ? 'right rail' : 'left rail';
-    $('phase-label').textContent = breakShooting ? 'Balls in motion...' : isAI && brk[myRole] ? 'CPU is lining up the matching break.' : `Pocket your marked ball after banking off the ${outsideRail}.`;
+    $('phase-label').textContent = breakShooting ? 'Balls in motion...' : isAI && brk[myRole] ? 'CPU is lining up the matching break.' : 'Shoot your marked ball to your RIGHT and bank it into the far pocket.';
   } else if (curP === myRole) {
     const mustMarked = markedBallFor(myRole) && !markedBallFor(myRole).out;
     $('turn-label').textContent = 'Your Shot';

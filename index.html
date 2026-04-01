@@ -1034,8 +1034,8 @@ let lastSyncedSeq = 0;
 let rematch = { mine:false, opp:false, startedAt:0 };
 
 const POCKETS = [
-  { x: CX, y: IT, targetFor:'p1', homeFor:'p2' },
-  { x: CX, y: IB, targetFor:'p2', homeFor:'p1' }
+  { x: CX, y: IT + 11, targetFor:'p1', homeFor:'p2' },  // ~1" into playing surface
+  { x: CX, y: IB - 11, targetFor:'p2', homeFor:'p1' }   // ~1" into playing surface
 ];
 
 // Regulation cross pattern: 4 pocket bumpers + 8 center cross

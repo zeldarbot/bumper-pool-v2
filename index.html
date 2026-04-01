@@ -999,7 +999,7 @@ const H = 630;
 const RAIL = 30;
 const IL = RAIL, IR = W - RAIL, IT = RAIL, IB = H - RAIL;
 const CX = W / 2, CY = H / 2;
-const BR = 12, BPR = 11, PR = 22, PSINK = 19;
+const BR = 12, BPR = 16, PR = 22, PSINK = 19;
 const FRICTION = .988;
 const RAIL_RESTITUTION = .72;
 const BUMPER_RESTITUTION = .85;
@@ -1043,9 +1043,9 @@ const POCKETS = [
 // Vertical arm (in line with pockets): red, white, gap, white, red
 // Horizontal arm: white, red, gap, red, white
 const BUMPERS = [
-  // Pocket bumpers (2 flanking each pocket — tight to pocket mouth)
-  { x: CX - 28, y: IT + 22, col: 'red' }, { x: CX + 28, y: IT + 22, col: 'white' },
-  { x: CX - 28, y: IB - 22, col: 'white' }, { x: CX + 28, y: IB - 22, col: 'red' },
+  // Pocket bumpers (2 flanking each pocket — set back, not blocking entrance)
+  { x: CX - 34, y: IT + 16, col: 'red' }, { x: CX + 34, y: IT + 16, col: 'white' },
+  { x: CX - 34, y: IB - 16, col: 'white' }, { x: CX + 34, y: IB - 16, col: 'red' },
   // Center cross — vertical arm (scaled for taller table)
   { x: CX, y: CY - 80, col: 'red' }, { x: CX, y: CY - 40, col: 'white' },
   { x: CX, y: CY + 40, col: 'white' }, { x: CX, y: CY + 80, col: 'red' },
@@ -2048,30 +2048,36 @@ function drawPockets() {
 function drawBumpers() {
   BUMPERS.forEach(bp => {
     // Shadow
-    Xx.beginPath(); Xx.arc(bp.x + 1.5, bp.y + 2.4, BPR + 1.5, 0, Math.PI * 2);
-    Xx.fillStyle = 'rgba(0,0,0,.32)'; Xx.fill();
-    // Bumper body — colored red or white
-    const g = Xx.createRadialGradient(bp.x - 3, bp.y - 3, 1, bp.x, bp.y, BPR);
+    Xx.beginPath(); Xx.arc(bp.x + 1.5, bp.y + 2.8, BPR + 2, 0, Math.PI * 2);
+    Xx.fillStyle = 'rgba(0,0,0,.35)'; Xx.fill();
+    // Rubber base ring (dark, flat — visually distinct from shiny balls)
+    Xx.beginPath(); Xx.arc(bp.x, bp.y, BPR, 0, Math.PI * 2);
+    Xx.fillStyle = '#1a1a1a'; Xx.fill();
+    // Inner rubber top — matte colored disc (smaller than base)
+    const topR = BPR * .72;
+    const g = Xx.createRadialGradient(bp.x - 1, bp.y - 1, 0, bp.x, bp.y, topR);
     if (bp.col === 'red') {
-      g.addColorStop(0, '#ff9999');
-      g.addColorStop(.3, '#dd4444');
-      g.addColorStop(.7, '#aa2222');
+      g.addColorStop(0, '#cc3333');
+      g.addColorStop(.6, '#991a1a');
       g.addColorStop(1, '#661111');
     } else {
-      g.addColorStop(0, '#ffffff');
-      g.addColorStop(.3, '#e8e8e8');
-      g.addColorStop(.7, '#bbbbbb');
+      g.addColorStop(0, '#e0e0e0');
+      g.addColorStop(.6, '#aaaaaa');
       g.addColorStop(1, '#777777');
     }
-    Xx.beginPath(); Xx.arc(bp.x, bp.y, BPR, 0, Math.PI * 2);
+    Xx.beginPath(); Xx.arc(bp.x, bp.y, topR, 0, Math.PI * 2);
     Xx.fillStyle = g; Xx.fill();
-    // Specular highlight
-    Xx.beginPath(); Xx.arc(bp.x - 3.4, bp.y - 4, BPR * .35, 0, Math.PI * 2);
-    Xx.fillStyle = 'rgba(255,255,255,.45)'; Xx.fill();
-    // Edge ring
+    // Small center dot (like a screw head)
+    Xx.beginPath(); Xx.arc(bp.x, bp.y, 2.5, 0, Math.PI * 2);
+    Xx.fillStyle = 'rgba(0,0,0,.4)'; Xx.fill();
+    // Outer ring
     Xx.beginPath(); Xx.arc(bp.x, bp.y, BPR, 0, Math.PI * 2);
-    Xx.strokeStyle = bp.col === 'red' ? 'rgba(100,15,15,.6)' : 'rgba(80,80,80,.5)';
-    Xx.lineWidth = 1.2; Xx.stroke();
+    Xx.strokeStyle = bp.col === 'red' ? 'rgba(80,10,10,.5)' : 'rgba(60,60,60,.4)';
+    Xx.lineWidth = 1.8; Xx.stroke();
+    // Inner ring
+    Xx.beginPath(); Xx.arc(bp.x, bp.y, topR, 0, Math.PI * 2);
+    Xx.strokeStyle = 'rgba(255,255,255,.12)';
+    Xx.lineWidth = .8; Xx.stroke();
   });
 }
 

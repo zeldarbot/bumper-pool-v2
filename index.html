@@ -1813,7 +1813,8 @@ function startSink(b, pocket, isPenaltyDrop = false) {
   b.pocket = { x:pocket.x, y:pocket.y, t:0 };
   pocketBursts.push({ x:pocket.x, y:pocket.y, life:1, hue:b.pl === 'p1' ? 'rgba(234,98,98,' : 'rgba(255,255,255,' });
   AudioEngine.pocket();
-  sunkThisTurn = true;
+  // Only keep your turn if you sank YOUR OWN ball in the correct pocket
+  if (!isPenaltyDrop && b.pl === curP && pocket.targetFor === b.pl) sunkThisTurn = true;
 }
 
 function phys() {

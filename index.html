@@ -1043,13 +1043,13 @@ const POCKETS = [
 // Vertical arm (in line with pockets): red, white, gap, white, red
 // Horizontal arm: white, red, gap, red, white
 const BUMPERS = [
-  // Pocket bumpers (2 flanking each pocket)
-  { x: CX - 28, y: IT + 18, col: 'red' }, { x: CX + 28, y: IT + 18, col: 'white' },
-  { x: CX - 28, y: IB - 18, col: 'white' }, { x: CX + 28, y: IB - 18, col: 'red' },
-  // Center cross — vertical arm (top to bottom)
-  { x: CX, y: CY - 66, col: 'red' }, { x: CX, y: CY - 33, col: 'white' },
-  { x: CX, y: CY + 33, col: 'white' }, { x: CX, y: CY + 66, col: 'red' },
-  // Center cross — horizontal arm (left to right)
+  // Pocket bumpers (2 flanking each pocket — offset further from pocket mouth)
+  { x: CX - 30, y: IT + 32, col: 'red' }, { x: CX + 30, y: IT + 32, col: 'white' },
+  { x: CX - 30, y: IB - 32, col: 'white' }, { x: CX + 30, y: IB - 32, col: 'red' },
+  // Center cross — vertical arm (scaled for taller table)
+  { x: CX, y: CY - 80, col: 'red' }, { x: CX, y: CY - 40, col: 'white' },
+  { x: CX, y: CY + 40, col: 'white' }, { x: CX, y: CY + 80, col: 'red' },
+  // Center cross — horizontal arm
   { x: CX - 66, y: CY, col: 'white' }, { x: CX - 33, y: CY, col: 'red' },
   { x: CX + 33, y: CY, col: 'red' }, { x: CX + 66, y: CY, col: 'white' }
 ];
@@ -1102,17 +1102,26 @@ function freshTurnMeta(actor = null) {
 }
 
 function rackBalls() {
-  const spacing = 26;
-  const frontOffset = 40;
-  const rowOffset = 28;
+  // Regulation: marked ball in front of own pocket, 2 balls on each side behind
+  // Gap in the middle so the two pairs flank the marked ball's column
+  const gap = 26;        // spacing between balls in each pair
+  const frontOffset = 42; // marked ball distance from pocket
+  const rowOffset = 30;   // how far back the 4 flanking balls sit
   const p1y = IB - frontOffset;
   const p2y = IT + frontOffset;
-  const rowXs = [CX - spacing * 1.5, CX - spacing * .5, CX + spacing * .5, CX + spacing * 1.5];
   return [
-    mk(CX, p1y, '#c92b2b', 'p1', true),
-    ...rowXs.map(x => mk(x, p1y - rowOffset, '#b81f1f', 'p1', false)),
-    mk(CX, p2y, '#eceef2', 'p2', true),
-    ...rowXs.map(x => mk(x, p2y + rowOffset, '#dadfe7', 'p2', false)),
+    // Red balls — P1 home is bottom pocket, shoots toward top
+    mk(CX, p1y, '#c92b2b', 'p1', true),                           // marked, centered
+    mk(CX - gap, p1y - rowOffset, '#b81f1f', 'p1', false),        // left inner
+    mk(CX - gap * 2, p1y - rowOffset, '#b81f1f', 'p1', false),   // left outer
+    mk(CX + gap, p1y - rowOffset, '#b81f1f', 'p1', false),        // right inner
+    mk(CX + gap * 2, p1y - rowOffset, '#b81f1f', 'p1', false),   // right outer
+    // White balls — P2 home is top pocket, shoots toward bottom
+    mk(CX, p2y, '#eceef2', 'p2', true),                           // marked, centered
+    mk(CX - gap, p2y + rowOffset, '#dadfe7', 'p2', false),        // left inner
+    mk(CX - gap * 2, p2y + rowOffset, '#dadfe7', 'p2', false),   // left outer
+    mk(CX + gap, p2y + rowOffset, '#dadfe7', 'p2', false),        // right inner
+    mk(CX + gap * 2, p2y + rowOffset, '#dadfe7', 'p2', false),   // right outer
   ];
 }
 
@@ -1242,7 +1251,7 @@ function updateTurnUI() {
   } else if (curP === myRole) {
     const mustMarked = markedBallFor(myRole) && !markedBallFor(myRole).out;
     $('turn-label').textContent = 'Your Shot';
-    $('phase-label').textContent = mustMarked ? 'Select your marked ball first.' : 'Select a ball, aim anywhere, pull back, release.';
+    $('phase-label').textContent = mustMarked ? 'Tap your marked ball and pull away to aim.' : 'Tap a ball and pull away to aim and shoot.';
   } else {
     $('turn-label').textContent = isAI ? 'CPU Thinking' : 'Waiting...';
     $('phase-label').textContent = `Watching ${roleName(curP)} line up the next shot.`;
@@ -1364,7 +1373,7 @@ function selectedBall() {
 }
 
 function frontSpotFor(role) {
-  return { x:CX, y: role === 'p1' ? IB - 40 : IT + 40 };
+  return { x:CX, y: role === 'p1' ? IB - 42 : IT + 42 };
 }
 
 function clearCue(sendMsg = true) {
@@ -2341,20 +2350,13 @@ function pickCueBall(point) {
 function updateCueFromPoint(point) {
   const ball = selectedBall();
   if (!ball) return;
-  const vx = point.x - ball.x;
-  const vy = point.y - ball.y;
-  const dist = Math.hypot(vx, vy);
-  if (!cue.dragging || cue.mode === 'aim') {
-    if (dist > 8) cue.angle = Math.atan2(vy, vx);
-    const pull = -(vx * Math.cos(cue.angle) + vy * Math.sin(cue.angle));
-    if (pull > 12 && dist > 10) cue.mode = 'power';
-    cue.power = 0;
-  }
-  if (cue.mode === 'power') {
-    const pull = clamp(-(vx * Math.cos(cue.angle) + vy * Math.sin(cue.angle)), 0, 96);
-    cue.power = clamp(pull / 96, 0, 1);
-    if (cue.power < .04 && dist < 20) cue.mode = 'aim';
-  }
+  // Vector from touch TO ball — slingshot style (pull away to aim opposite)
+  const dx = ball.x - point.x;
+  const dy = ball.y - point.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist > 8) cue.angle = Math.atan2(dy, dx); // ball travels away from finger
+  cue.power = clamp((dist - 12) / 90, 0, 1);
+  if (dist < 14) cue.power = 0;
   sendAimState();
 }
 

@@ -184,6 +184,16 @@ h1{
 #table-shell.break-mode{box-shadow:0 0 0 1px rgba(200,169,110,.35),0 0 44px rgba(200,169,110,.14),0 18px 60px rgba(0,0,0,.5)}
 canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:crosshair}
 #ins{font-size:.76rem;color:#7f8792;text-align:center;line-height:1.45}
+.foul-banner{
+  position:fixed;left:50%;top:20px;transform:translate(-50%,-16px) scale(.96);
+  padding:12px 18px;border-radius:999px;z-index:24;pointer-events:none;
+  background:linear-gradient(180deg,rgba(125,22,22,.96),rgba(64,10,10,.98));
+  border:1px solid rgba(255,190,160,.26);color:#fff2dd;
+  box-shadow:0 18px 44px rgba(0,0,0,.45);
+  letter-spacing:.14em;text-transform:uppercase;font-size:.74rem;
+  opacity:0;transition:opacity .18s ease,transform .24s ease
+}
+.foul-banner.show{opacity:1;transform:translate(-50%,0) scale(1)}
 .overlay{
   display:none;position:fixed;inset:0;background:rgba(4,6,10,.88);z-index:20;
   align-items:center;justify-content:center;padding:18px
@@ -341,8 +351,10 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
     <div id="table-shell">
       <canvas id="c"></canvas>
     </div>
-    <div id="ins">Tap your ball. Drag back to set line and power. Release to shoot. On the break, both marked balls bank to each player’s right side rail.</div>
+    <div id="ins">Tap a legal ball to select it. Drag anywhere to aim, pull the cue back for power, then release to shoot. On the break, marked balls still bank to each player’s outside rail.</div>
   </div>
+
+  <div id="foul-banner" class="foul-banner">Foul</div>
 
   <div id="dc-overlay" class="overlay">
     <div class="overlay-card">
@@ -745,7 +757,7 @@ function clearAITimers() {
   if (aiAimTimer) clearTimeout(aiAimTimer);
   aiTimer = null;
   aiAimTimer = null;
-  opponentAim = { active:false, ballIdx:-1 };
+  opponentAim = { active:false, ballIdx:-1, angle:-Math.PI / 2, power:0 };
 }
 
 function createGame() {
@@ -897,7 +909,7 @@ function send(msg) {
   if (conn && conn.open && connected) {
     try { conn.send(msg); return true; } catch(e) {}
   }
-  if (['shot','break-aim','state-sync','profile','score-sync','aim-start','aim-end','rematch-request','rematch-start'].includes(msg.type)) {
+  if (['shot','break-aim','state-sync','profile','score-sync','aim','foul','rematch-request','rematch-start'].includes(msg.type)) {
     msgQueue.push({ msg, time: Date.now() });
     msgQueue = msgQueue.filter(item => Date.now() - item.time < 10000);
   }
@@ -983,12 +995,18 @@ $('create-btn').onclick = createGame;
 $('join-btn').onclick = joinGame;
 
 const W = 420;
-const H = 560;
-const RAIL = 34;
+const H = 630;
+const RAIL = 30;
 const IL = RAIL, IR = W - RAIL, IT = RAIL, IB = H - RAIL;
 const CX = W / 2, CY = H / 2;
-const BR = 11, BPR = 12, PR = 18, PSINK = 17;
-const FRICTION = .984;
+const BR = 12, BPR = 11, PR = 22, PSINK = 19;
+const FRICTION = .988;
+const RAIL_RESTITUTION = .72;
+const BUMPER_RESTITUTION = .85;
+const BALL_RESTITUTION = .92;
+const STOP_EPS = .06;
+const MAX_SHOT_POWER = 18;
+const CUE_PREVIEW_LEN = 300;
 const TURN_GLOW = { p1: 'turn-red', p2: 'turn-white', break: 'break-mode' };
 
 let sc = 1;
@@ -1001,12 +1019,15 @@ let brk = { p1:false, p2:false };
 let breakShots = { p1:null, p2:null };
 let breakStatus = { p1:{ rightRail:false }, p2:{ rightRail:false } };
 let breakShooting = false;
-let sel = null;
-let aim = null;
+let cue = { active:false, ballIdx:-1, angle:-Math.PI / 2, power:0, dragging:false, mode:'aim', startedOnBall:false };
 let firing = false;
 let sunkThisTurn = false;
 let pocketBursts = [];
-let opponentAim = { active:false, ballIdx:-1 };
+let opponentAim = { active:false, ballIdx:-1, angle:-Math.PI / 2, power:0 };
+let turnMeta = freshTurnMeta();
+let penaltyState = null;
+let foulBannerTimer = null;
+let foulSeq = 0;
 let af = 0;
 let stateSeq = 0;
 let lastSyncedSeq = 0;
@@ -1056,7 +1077,7 @@ function generateFelt() {
 
 function resize() {
   const availW = Math.min(window.innerWidth - 20, 860);
-  const availH = window.innerHeight - 210;
+  const availH = window.innerHeight - 235;
   sc = Math.min(availW / W, availH / H);
   sc = Math.max(.82, Math.min(sc, 1.95));
   Cv.width = Math.round(W * sc);
@@ -1076,27 +1097,22 @@ function mk(x, y, col, pl, m) {
   };
 }
 
+function freshTurnMeta(actor = null) {
+  return { actor, foul:null, instantLoss:null, sunk:[] };
+}
+
 function rackBalls() {
-  // Regulation: marked ball directly in front of home pocket
-  // Other 4 balls in a horizontal line (2 on each side), straddling the pocket
-  // This mirrors the reference image layout
-  const gap = 26; // horizontal spacing between balls
-  const p1y = IB - 42; // red marked ball, in front of bottom pocket
-  const p2y = IT + 42; // white marked ball, in front of top pocket
-  const rowOffset = 28; // how far back the 4 flanking balls sit from the marked ball
+  const spacing = 26;
+  const frontOffset = 40;
+  const rowOffset = 28;
+  const p1y = IB - frontOffset;
+  const p2y = IT + frontOffset;
+  const rowXs = [CX - spacing * 1.5, CX - spacing * .5, CX + spacing * .5, CX + spacing * 1.5];
   return [
-    // Red balls — P1 home is bottom pocket, shoots toward top
-    mk(CX, p1y, '#c92b2b', 'p1', true),                           // marked, centered in front of pocket
-    mk(CX - gap, p1y - rowOffset, '#b81f1f', 'p1', false),        // left inner
-    mk(CX - gap * 2, p1y - rowOffset, '#b81f1f', 'p1', false),   // left outer
-    mk(CX + gap, p1y - rowOffset, '#b81f1f', 'p1', false),        // right inner
-    mk(CX + gap * 2, p1y - rowOffset, '#b81f1f', 'p1', false),   // right outer
-    // White balls — P2 home is top pocket, shoots toward bottom
-    mk(CX, p2y, '#eceef2', 'p2', true),                           // marked, centered in front of pocket
-    mk(CX - gap, p2y + rowOffset, '#dadfe7', 'p2', false),        // left inner
-    mk(CX - gap * 2, p2y + rowOffset, '#dadfe7', 'p2', false),   // left outer
-    mk(CX + gap, p2y + rowOffset, '#dadfe7', 'p2', false),        // right inner
-    mk(CX + gap * 2, p2y + rowOffset, '#dadfe7', 'p2', false),   // right outer
+    mk(CX, p1y, '#c92b2b', 'p1', true),
+    ...rowXs.map(x => mk(x, p1y - rowOffset, '#b81f1f', 'p1', false)),
+    mk(CX, p2y, '#eceef2', 'p2', true),
+    ...rowXs.map(x => mk(x, p2y + rowOffset, '#dadfe7', 'p2', false)),
   ];
 }
 
@@ -1119,13 +1135,14 @@ function initGameState() {
   breakShots = { p1:null, p2:null };
   breakStatus = { p1:{ rightRail:false }, p2:{ rightRail:false } };
   breakShooting = false;
-  sel = null;
-  aim = null;
+  cue = { active:false, ballIdx:-1, angle:-Math.PI / 2, power:0, dragging:false, mode:'aim', startedOnBall:false };
   firing = false;
   sunkThisTurn = false;
   balls = rackBalls();
   pocketBursts = [];
-  opponentAim = { active:false, ballIdx:-1 };
+  opponentAim = { active:false, ballIdx:-1, angle:-Math.PI / 2, power:0 };
+  turnMeta = freshTurnMeta();
+  penaltyState = null;
   rematch = { mine:false, opp:false, startedAt:0 };
   resultRecorded = false;
   stateSeq = 0;
@@ -1172,8 +1189,8 @@ function applyState(data) {
     b.out = src.out;
     b.x = Math.abs(src.x - b.x) > 20 ? src.x : b.x + (src.x - b.x) * .28;
     b.y = Math.abs(src.y - b.y) > 20 ? src.y : b.y + (src.y - b.y) * .28;
-    b.vx = Math.abs(src.vx) < .04 ? 0 : src.vx;
-    b.vy = Math.abs(src.vy) < .04 ? 0 : src.vy;
+    b.vx = Math.abs(src.vx) < STOP_EPS ? 0 : src.vx;
+    b.vy = Math.abs(src.vy) < STOP_EPS ? 0 : src.vy;
     b.spin = src.spin || 0;
     b.pocket = src.pocket || null;
     b.scale = src.scale == null ? 1 : src.scale;
@@ -1220,12 +1237,12 @@ function updateTurnUI() {
   if (over) return;
   if (phase === 'break') {
     $('turn-label').textContent = brk[myRole] ? 'Waiting On Break' : 'Simultaneous Break';
-    const rightRail = myRole === 'p1' ? 'right rail' : 'left rail';
-    $('phase-label').textContent = breakShooting ? 'Balls in motion...' : isAI && brk[myRole] ? 'CPU is lining up the matching break.' : `Pocket your marked ball after banking off the ${rightRail}.`;
+    const outsideRail = myRole === 'p1' ? 'right rail' : 'left rail';
+    $('phase-label').textContent = breakShooting ? 'Balls in motion...' : isAI && brk[myRole] ? 'CPU is lining up the matching break.' : `Pocket your marked ball after banking off the ${outsideRail}.`;
   } else if (curP === myRole) {
     const mustMarked = markedBallFor(myRole) && !markedBallFor(myRole).out;
     $('turn-label').textContent = 'Your Shot';
-    $('phase-label').textContent = mustMarked ? 'Marked ball must score first.' : 'Shoot any of your remaining balls.';
+    $('phase-label').textContent = mustMarked ? 'Select your marked ball first.' : 'Select a ball, aim anywhere, pull back, release.';
   } else {
     $('turn-label').textContent = isAI ? 'CPU Thinking' : 'Waiting...';
     $('phase-label').textContent = `Watching ${roleName(curP)} line up the next shot.`;
@@ -1243,7 +1260,7 @@ function canIShoot() {
 }
 
 function moving() {
-  return balls.some(b => !b.out && (b.pocket || Math.abs(b.vx) > .04 || Math.abs(b.vy) > .04));
+  return balls.some(b => !b.out && (b.pocket || Math.abs(b.vx) > STOP_EPS || Math.abs(b.vy) > STOP_EPS));
 }
 
 function handleMessage(data) {
@@ -1274,9 +1291,10 @@ function handleMessage(data) {
         b.vy = data.vy;
         firing = true;
         sunkThisTurn = false;
-        AudioEngine.strike(Math.min(1, Math.hypot(data.vx, data.vy) / 16));
+        turnMeta = freshTurnMeta(data.role || null);
+        AudioEngine.strike(Math.min(1, Math.hypot(data.vx, data.vy) / MAX_SHOT_POWER));
       }
-      opponentAim = { active:false, ballIdx:-1 };
+      opponentAim = { active:false, ballIdx:-1, angle:-Math.PI / 2, power:0 };
       break;
     }
     case 'break-aim':
@@ -1285,11 +1303,16 @@ function handleMessage(data) {
       updateTurnUI();
       if (brk.p1 && brk.p2) launchBreak();
       break;
-    case 'aim-start':
-      if (data.role !== myRole) opponentAim = { active:true, ballIdx:data.ballIdx };
+    case 'aim':
+      if (data.role !== myRole) {
+        if (data.active === false) opponentAim = { active:false, ballIdx:-1, angle:-Math.PI / 2, power:0 };
+        else opponentAim = { active:true, ballIdx:data.ballIdx, angle:data.angle, power:data.power || 0 };
+      }
       break;
-    case 'aim-end':
-      if (data.role !== myRole) opponentAim = { active:false, ballIdx:-1 };
+    case 'foul':
+      if (data.seq && data.seq <= foulSeq) break;
+      foulSeq = data.seq || foulSeq;
+      showFoulBanner(data.text || 'Foul');
       break;
     case 'rematch-request':
       rematch.opp = true;
@@ -1317,6 +1340,7 @@ function launchBreak() {
     b.vx = shot.vx;
     b.vy = shot.vy;
   });
+  turnMeta = freshTurnMeta();
   breakShooting = true;
   firing = true;
   sunkThisTurn = false;
@@ -1329,6 +1353,109 @@ function rightRailFor(role) {
 
 function targetPocketFor(role) {
   return POCKETS.find(p => p.targetFor === role);
+}
+
+function otherRole(role) {
+  return role === 'p1' ? 'p2' : 'p1';
+}
+
+function selectedBall() {
+  return balls[cue.ballIdx] || null;
+}
+
+function frontSpotFor(role) {
+  return { x:CX, y: role === 'p1' ? IB - 40 : IT + 40 };
+}
+
+function clearCue(sendMsg = true) {
+  cue = { active:false, ballIdx:-1, angle:cue.angle || -Math.PI / 2, power:0, dragging:false, mode:'aim', startedOnBall:false };
+  if (sendMsg) send({ type:'aim', role:myRole, active:false });
+}
+
+function setCueBall(ball, startedOnBall = false) {
+  cue.active = true;
+  cue.ballIdx = balls.indexOf(ball);
+  cue.power = 0;
+  cue.dragging = false;
+  cue.mode = 'aim';
+  cue.startedOnBall = startedOnBall;
+  cue.angle = cue.angle || (ball.pl === 'p1' ? -Math.PI / 2 : Math.PI / 2);
+}
+
+function showFoulBanner(text) {
+  const banner = $('foul-banner');
+  banner.textContent = text;
+  banner.classList.add('show');
+  if (foulBannerTimer) clearTimeout(foulBannerTimer);
+  foulBannerTimer = setTimeout(() => banner.classList.remove('show'), 1700);
+}
+
+function remainingBalls(role) {
+  return balls.filter(b => b.pl === role && !b.out && !b.pocket);
+}
+
+function markTurnFoul(reason, text, beneficiary) {
+  if (turnMeta.foul) return;
+  turnMeta.foul = { reason, text, beneficiary };
+}
+
+function registerPocketEvent(ball, pocket) {
+  if (!turnMeta.actor || penaltyState) return;
+  turnMeta.sunk.push({ idx:balls.indexOf(ball), role:ball.pl, marked:ball.m, pocketFor:pocket.targetFor });
+  if (ball.pl !== turnMeta.actor) return;
+  if (pocket.targetFor !== ball.pl) {
+    const isLastBall = remainingBalls(ball.pl).length <= 1;
+    if (isLastBall) turnMeta.instantLoss = { loser:ball.pl, reason:`Last ball in wrong pocket` };
+    else markTurnFoul('wrong-pocket', `FOUL - Wrong Pocket`, otherRole(ball.pl));
+    return;
+  }
+  const marked = markedBallFor(ball.pl);
+  if (marked && !marked.out && !marked.pocket && ball !== marked) markTurnFoul('wrong-ball-first', `FOUL - Marked Ball First`, otherRole(ball.pl));
+}
+
+function choosePenaltyBalls(role, count) {
+  const pocket = targetPocketFor(role);
+  return remainingBalls(role)
+    .slice()
+    .sort((a, b) => Math.hypot(a.x - pocket.x, a.y - pocket.y) - Math.hypot(b.x - pocket.x, b.y - pocket.y))
+    .slice(0, count);
+}
+
+function startPenaltyDrops(foul) {
+  const ballsToDrop = choosePenaltyBalls(foul.beneficiary, 2);
+  showFoulBanner(foul.text);
+  foulSeq += 1;
+  send({ type:'foul', seq:foulSeq, role:turnMeta.actor, beneficiary:foul.beneficiary, text:foul.text });
+  if (!ballsToDrop.length) return false;
+  penaltyState = { nextPlayer:otherRole(turnMeta.actor), keepTurn:false };
+  ballsToDrop.forEach((ball, index) => {
+    const pocket = targetPocketFor(foul.beneficiary);
+    setTimeout(() => {
+      if (!ball.out && !ball.pocket) startSink(ball, pocket, true);
+    }, index * 120);
+  });
+  return true;
+}
+
+function resolveInstantLoss(loss) {
+  over = true;
+  const winnerRole = otherRole(loss.loser);
+  const loserRole = loss.loser;
+  const winnerName = roleName(winnerRole);
+  const loserName = roleName(loserRole);
+  if (!resultRecorded) {
+    recordMatchWin(winnerName, loserName);
+    resultRecorded = true;
+  }
+  $('wt').textContent = `${winnerName} Wins`;
+  $('win-stats').innerHTML = `${loss.reason}<br>${matchupSummary(winnerName, loserName)}`;
+  $('ov').classList.add('show');
+  $('rematch-status').textContent = '';
+  $('rb').textContent = 'Play Again';
+  $('rb').disabled = false;
+  AudioEngine.win();
+  Confetti.launch(winnerRole === 'p1' ? 'red' : 'white');
+  updateScoreboard();
 }
 
 function clamp(n, min, max) {
@@ -1375,7 +1502,7 @@ function pathBlocked(x1, y1, x2, y2, ignoreBall = null, pad = BR * 2 - 1) {
 
 function legalBallsFor(role) {
   const marked = markedBallFor(role);
-  if (marked && !marked.out) return [marked];
+  if (marked && !marked.out && !marked.pocket) return [marked];
   return balls.filter(b => b.pl === role && !b.out && !b.pocket);
 }
 
@@ -1485,7 +1612,7 @@ function applyShotVariance(shot, role, phaseName = phase) {
   const powerScale = phaseName === 'break' ? rand(.94, 1.06) : rand(.9, 1.1);
   const signBias = role === 'p2' ? 1 : -1;
   const angle = shot.angle + degToRad(rand(-angleSpread, angleSpread)) + degToRad(rand(-1.2, 1.2) * signBias * .15);
-  const power = clamp(shot.power * powerScale, 3.8, 16);
+  const power = clamp(shot.power * powerScale, 3.8, MAX_SHOT_POWER);
   return {
     ballIdx: shot.ballIdx,
     vx: Math.cos(angle) * power,
@@ -1496,19 +1623,21 @@ function applyShotVariance(shot, role, phaseName = phase) {
 function performShot(role, ballIdx, vx, vy, isBreakShot = false) {
   const ball = balls[ballIdx];
   if (!ball) return;
+  cue.power = 0;
   if (isBreakShot) {
     brk[role] = true;
     breakShots[role] = { ballIdx, vx, vy };
     send({ type:'break-aim', role, ballIdx, vx, vy });
     if (brk.p1 && brk.p2) launchBreak();
   } else {
+    turnMeta = freshTurnMeta(role);
     ball.vx = vx;
     ball.vy = vy;
     firing = true;
     sunkThisTurn = false;
-    send({ type:'shot', ballIdx, vx, vy });
+    send({ type:'shot', role, ballIdx, vx, vy });
   }
-  AudioEngine.strike(Math.min(1, Math.hypot(vx, vy) / 16));
+  AudioEngine.strike(Math.min(1, Math.hypot(vx, vy) / MAX_SHOT_POWER));
   if (navigator.vibrate && role === myRole) navigator.vibrate(18);
 }
 
@@ -1525,11 +1654,11 @@ function maybeScheduleAITurn() {
   const preview = Math.max(220, Math.min(420, delay - 60));
   aiTimer = setTimeout(() => {
     if (token !== aiTurnToken || over || moving() || firing) return;
-    opponentAim = { active:true, ballIdx:plan.ballIdx };
+    opponentAim = { active:true, ballIdx:plan.ballIdx, angle:plan.angle, power:clamp(plan.power / MAX_SHOT_POWER, 0, 1) };
     updateTurnUI();
     aiAimTimer = setTimeout(() => {
       if (token !== aiTurnToken || over || moving() || firing) return;
-      opponentAim = { active:false, ballIdx:-1 };
+      opponentAim = { active:false, ballIdx:-1, angle:-Math.PI / 2, power:0 };
       const shot = applyShotVariance(plan, aiRole, shouldBreak ? 'break' : 'play');
       performShot(aiRole, shot.ballIdx, shot.vx, shot.vy, shouldBreak);
       updateTurnUI();
@@ -1538,31 +1667,80 @@ function maybeScheduleAITurn() {
 }
 
 function stopped() {
-  checkWin();
-  if (over) return;
+  if (penaltyState) {
+    penaltyState = null;
+    checkWin();
+    if (over) return;
+    curP = otherRole(turnMeta.actor);
+    sunkThisTurn = false;
+    turnMeta = freshTurnMeta();
+    clearCue(false);
+    firing = false;
+    opponentAim = { active:false, ballIdx:-1, angle:-Math.PI / 2, power:0 };
+    updateScoreboard();
+    updateTurnUI();
+    if (isHost && connected) {
+      const state = getFullState();
+      send(state);
+      setTimeout(() => { if (connected) send(getFullState()); }, 220);
+    }
+    maybeScheduleAITurn();
+    return;
+  }
+
+  if (turnMeta.instantLoss) {
+    resolveInstantLoss(turnMeta.instantLoss);
+    return;
+  }
+
   if (phase === 'break') {
     breakShooting = false;
-    phase = 'play';
-    const ranked = ['p1', 'p2'].map(role => {
-      const marked = markedBallFor(role);
-      const target = targetPocketFor(role);
-      const banked = breakStatus[role].rightRail;
-      const dist = marked.out ? 0 : Math.hypot(marked.x - target.x, marked.y - target.y);
-      return {
-        role,
-        valid: banked,
-        dist: marked.out && banked ? -1 : banked ? dist : 99999
-      };
-    }).sort((a, b) => a.dist - b.dist);
-    curP = ranked[0].role;
+    const p1Marked = markedBallFor('p1');
+    const p2Marked = markedBallFor('p2');
+    const p1Sunk = !!(p1Marked && p1Marked.out);
+    const p2Sunk = !!(p2Marked && p2Marked.out);
+    if (p1Sunk && p2Sunk) {
+      [p1Marked, p2Marked].forEach((ball, idx) => {
+        const role = idx === 0 ? 'p1' : 'p2';
+        const spot = frontSpotFor(role);
+        ball.out = false;
+        ball.pocket = null;
+        ball.scale = 1;
+        ball.alpha = 1;
+        ball.vx = 0;
+        ball.vy = 0;
+        ball.x = spot.x;
+        ball.y = spot.y;
+      });
+      phase = 'break';
+      brk = { p1:false, p2:false };
+      breakShots = { p1:null, p2:null };
+      breakStatus = { p1:{ rightRail:false }, p2:{ rightRail:false } };
+      turnMeta = freshTurnMeta();
+    } else {
+      phase = 'play';
+      const ranked = ['p1', 'p2'].map(role => {
+        const marked = markedBallFor(role);
+        const target = targetPocketFor(role);
+        const dist = marked && !marked.out ? Math.hypot(marked.x - target.x, marked.y - target.y) : -1;
+        return { role, dist: marked && marked.out ? -1 : dist };
+      }).sort((a, b) => a.dist - b.dist);
+      curP = ranked[0].role;
+    }
+  } else if (turnMeta.foul) {
+    if (startPenaltyDrops(turnMeta.foul)) return;
+    curP = otherRole(turnMeta.actor);
   } else if (!sunkThisTurn) {
-    curP = curP === 'p1' ? 'p2' : 'p1';
+    curP = otherRole(curP);
   }
+
+  checkWin();
+  if (over) return;
   sunkThisTurn = false;
-  sel = null;
-  aim = null;
+  turnMeta = freshTurnMeta();
+  clearCue(false);
   firing = false;
-  opponentAim = { active:false, ballIdx:-1 };
+  opponentAim = { active:false, ballIdx:-1, angle:-Math.PI / 2, power:0 };
   updateScoreboard();
   updateTurnUI();
   if (isHost && connected) {
@@ -1598,7 +1776,8 @@ function checkWin() {
   updateScoreboard();
 }
 
-function startSink(b, pocket) {
+function startSink(b, pocket, isPenaltyDrop = false) {
+  if (!isPenaltyDrop) registerPocketEvent(b, pocket);
   b.pocket = { x:pocket.x, y:pocket.y, t:0 };
   pocketBursts.push({ x:pocket.x, y:pocket.y, life:1, hue:b.pl === 'p1' ? 'rgba(234,98,98,' : 'rgba(255,255,255,' });
   AudioEngine.pocket();
@@ -1631,33 +1810,34 @@ function phys() {
     b.lastY = b.y;
     b.x += b.vx;
     b.y += b.vy;
-    b.vx *= FRICTION;
-    b.vy *= FRICTION;
-    if (Math.abs(b.vx) < .04) b.vx = 0;
-    if (Math.abs(b.vy) < .04) b.vy = 0;
     const speed = Math.hypot(b.vx, b.vy);
+    const dynamicFriction = Math.min(.994, FRICTION + Math.min(speed, MAX_SHOT_POWER) * .00028);
+    b.vx *= dynamicFriction;
+    b.vy *= dynamicFriction;
+    if (Math.abs(b.vx) < STOP_EPS) b.vx = 0;
+    if (Math.abs(b.vy) < STOP_EPS) b.vy = 0;
     b.spin += speed * .05;
 
-    if (b.y - BR < IT && Math.abs(b.x - CX) > PR + 10) {
+    if (b.y - BR < IT && Math.abs(b.x - CX) > PR + 12) {
       AudioEngine.railHit(Math.abs(b.vy));
       b.y = IT + BR;
-      b.vy = Math.abs(b.vy) * .82;
+      b.vy = Math.abs(b.vy) * RAIL_RESTITUTION;
     }
-    if (b.y + BR > IB && Math.abs(b.x - CX) > PR + 10) {
+    if (b.y + BR > IB && Math.abs(b.x - CX) > PR + 12) {
       AudioEngine.railHit(Math.abs(b.vy));
       b.y = IB - BR;
-      b.vy = -Math.abs(b.vy) * .82;
+      b.vy = -Math.abs(b.vy) * RAIL_RESTITUTION;
     }
     if (b.x - BR < IL) {
       AudioEngine.railHit(Math.abs(b.vx));
       b.x = IL + BR;
-      b.vx = Math.abs(b.vx) * .82;
+      b.vx = Math.abs(b.vx) * RAIL_RESTITUTION;
       if (phase === 'break' && b.m && b.pl === 'p2') breakStatus.p2.rightRail = true;
     }
     if (b.x + BR > IR) {
       AudioEngine.railHit(Math.abs(b.vx));
       b.x = IR - BR;
-      b.vx = -Math.abs(b.vx) * .82;
+      b.vx = -Math.abs(b.vx) * RAIL_RESTITUTION;
       if (phase === 'break' && b.m && b.pl === 'p1') breakStatus.p1.rightRail = true;
     }
 
@@ -1672,8 +1852,9 @@ function phys() {
         const dot = b.vx * nx + b.vy * ny;
         if (dot < 0) {
           AudioEngine.bumperHit(Math.abs(dot));
-          b.vx -= 2.05 * dot * nx;
-          b.vy -= 2.05 * dot * ny;
+          const bounce = -(1 + BUMPER_RESTITUTION) * dot;
+          b.vx += bounce * nx;
+          b.vy += bounce * ny;
         }
         b.x = bumper.x + nx * (min + .3);
         b.y = bumper.y + ny * (min + .3);
@@ -1682,15 +1863,6 @@ function phys() {
 
     for (const pocket of POCKETS) {
       if (Math.hypot(b.x - pocket.x, b.y - pocket.y) < PSINK) {
-        if (pocket.targetFor !== b.pl) {
-          bounceFromPocket(b, pocket);
-          continue;
-        }
-        const marked = markedBallFor(b.pl);
-        if (marked && !marked.out && b !== marked) {
-          bounceFromPocket(b, pocket);
-          continue;
-        }
         if (phase === 'break' && b.m && !breakStatus[b.pl].rightRail) {
           bounceFromPocket(b, pocket);
           continue;
@@ -1709,11 +1881,14 @@ function phys() {
       const dist = Math.hypot(dx, dy);
       if (dist < BR * 2 && dist > .001) {
         const nx = dx / dist, ny = dy / dist;
-        const impact = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
-        if (impact > 0) {
-          a.vx -= impact * nx; a.vy -= impact * ny;
-          b.vx += impact * nx; b.vy += impact * ny;
-          AudioEngine.ballHit(impact);
+        const relVel = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+        if (relVel < 0) {
+          const impulse = -(1 + BALL_RESTITUTION) * relVel / 2;
+          a.vx -= impulse * nx;
+          a.vy -= impulse * ny;
+          b.vx += impulse * nx;
+          b.vy += impulse * ny;
+          AudioEngine.ballHit(Math.abs(impulse));
         }
         const overlap = BR * 2 - dist;
         a.x -= nx * overlap / 2; a.y -= ny * overlap / 2;
@@ -1729,8 +1904,8 @@ function bounceFromPocket(b, pocket) {
   const dx = b.x - pocket.x;
   const dy = b.y - pocket.y;
   const dist = Math.hypot(dx, dy) || 1;
-  b.vx = (dx / dist) * 4.8;
-  b.vy = (dy / dist) * 4.8;
+  b.vx = (dx / dist) * 4.2;
+  b.vy = (dy / dist) * 4.2;
   b.x = pocket.x + (dx / dist) * (PSINK + BR + 4);
   b.y = pocket.y + (dy / dist) * (PSINK + BR + 4);
   AudioEngine.railHit(3);
@@ -1885,6 +2060,7 @@ function drawPowerArc(ball, power) {
 
 function drawBall(ball) {
   if (ball.out) return;
+  const selected = selectedBall();
   const scale = ball.scale || 1;
   const alpha = ball.alpha == null ? 1 : ball.alpha;
   const speed = Math.hypot(ball.vx, ball.vy);
@@ -1929,10 +2105,10 @@ function drawBall(ball) {
     Xx.fill();
   }
 
-  if (ball === sel) {
+  if (ball === selected) {
     Xx.save();
     Xx.shadowColor = '#ffe38c';
-    Xx.shadowBlur = 14;
+    Xx.shadowBlur = 16 + cue.power * 10;
     Xx.beginPath(); Xx.arc(ball.x, ball.y, BR + 5, 0, Math.PI * 2);
     Xx.strokeStyle = '#ffe38c';
     Xx.lineWidth = 2.6; Xx.stroke();
@@ -1949,67 +2125,145 @@ function drawBall(ball) {
   Xx.restore();
 }
 
-function firstCollisionPoint(ball, dirX, dirY) {
-  const maxLen = 150;
-  for (let t = 20; t <= maxLen; t += 4) {
-    const x = ball.x + dirX * t;
-    const y = ball.y + dirY * t;
-    if (x - BR < IL || x + BR > IR || y - BR < IT || y + BR > IB) return { x, y };
-    if (BUMPERS.some(bp => Math.hypot(x - bp.x, y - bp.y) < BR + BPR + 1)) return { x, y };
-    if (balls.some(other => other !== ball && !other.out && !other.pocket && Math.hypot(x - other.x, y - other.y) < BR * 2 + 1)) return { x, y };
+function rayToRail(x, y, dx, dy, limit = CUE_PREVIEW_LEN) {
+  const hits = [];
+  if (dx > .0001) hits.push({ t:(IR - BR - x) / dx, nx:-1, ny:0 });
+  if (dx < -.0001) hits.push({ t:(IL + BR - x) / dx, nx:1, ny:0 });
+  if (dy > .0001) hits.push({ t:(IB - BR - y) / dy, nx:0, ny:-1 });
+  if (dy < -.0001) hits.push({ t:(IT + BR - y) / dy, nx:0, ny:1 });
+  return hits.filter(hit => hit.t > 0 && hit.t <= limit).sort((a, b) => a.t - b.t)[0] || null;
+}
+
+function rayToBall(ball, dx, dy, limit = CUE_PREVIEW_LEN) {
+  let best = null;
+  for (const other of balls) {
+    if (other === ball || other.out || other.pocket) continue;
+    const ox = other.x - ball.x;
+    const oy = other.y - ball.y;
+    const proj = ox * dx + oy * dy;
+    if (proj <= BR * 2 || proj >= limit) continue;
+    const perpSq = ox * ox + oy * oy - proj * proj;
+    const radius = BR * 2;
+    if (perpSq >= radius * radius) continue;
+    const hitT = proj - Math.sqrt(radius * radius - perpSq);
+    if (hitT <= 0 || hitT >= limit) continue;
+    if (!best || hitT < best.t) best = { t:hitT, ball:other };
   }
-  return { x: ball.x + dirX * maxLen, y: ball.y + dirY * maxLen };
+  return best;
+}
+
+function cuePreview(ball, angle) {
+  const dx = Math.cos(angle);
+  const dy = Math.sin(angle);
+  const firstBall = rayToBall(ball, dx, dy);
+  const firstRail = rayToRail(ball.x, ball.y, dx, dy);
+  const segments = [];
+  const start = { x:ball.x + dx * (BR + 2), y:ball.y + dy * (BR + 2) };
+  if (firstBall && (!firstRail || firstBall.t < firstRail.t)) {
+    const hitX = ball.x + dx * firstBall.t;
+    const hitY = ball.y + dy * firstBall.t;
+    segments.push({ x1:start.x, y1:start.y, x2:hitX, y2:hitY });
+    const nx = (firstBall.ball.x - hitX) / (Math.hypot(firstBall.ball.x - hitX, firstBall.ball.y - hitY) || 1);
+    const ny = (firstBall.ball.y - hitY) / (Math.hypot(firstBall.ball.x - hitX, firstBall.ball.y - hitY) || 1);
+    return {
+      segments,
+      collision:{ x:hitX, y:hitY },
+      secondary:{ x1:firstBall.ball.x, y1:firstBall.ball.y, x2:firstBall.ball.x + nx * 72, y2:firstBall.ball.y + ny * 72 }
+    };
+  }
+  if (firstRail) {
+    const hitX = ball.x + dx * firstRail.t;
+    const hitY = ball.y + dy * firstRail.t;
+    segments.push({ x1:start.x, y1:start.y, x2:hitX, y2:hitY });
+    const dot = dx * firstRail.nx + dy * firstRail.ny;
+    const rx = dx - 2 * dot * firstRail.nx;
+    const ry = dy - 2 * dot * firstRail.ny;
+    const remaining = CUE_PREVIEW_LEN - firstRail.t;
+    segments.push({ x1:hitX, y1:hitY, x2:hitX + rx * remaining, y2:hitY + ry * remaining });
+    const reflectedBall = rayToBall({ x:hitX, y:hitY }, rx, ry, remaining);
+    if (reflectedBall) {
+      const impactX = hitX + rx * reflectedBall.t;
+      const impactY = hitY + ry * reflectedBall.t;
+      segments[1].x2 = impactX;
+      segments[1].y2 = impactY;
+      return { segments, collision:{ x:impactX, y:impactY } };
+    }
+    return { segments, collision:{ x:hitX, y:hitY } };
+  }
+  segments.push({ x1:start.x, y1:start.y, x2:start.x + dx * CUE_PREVIEW_LEN, y2:start.y + dy * CUE_PREVIEW_LEN });
+  return { segments };
+}
+
+function drawCueActor(ball, angle, power, alpha = 1) {
+  const dx = Math.cos(angle);
+  const dy = Math.sin(angle);
+  const shake = power > .92 ? Math.sin(performance.now() / 26) * (power - .92) * 6 : 0;
+  const pull = 18 + power * 46 + shake;
+  const cueLen = 122;
+  const nearX = ball.x - dx * (BR + 8 + pull);
+  const nearY = ball.y - dy * (BR + 8 + pull);
+  const farX = nearX - dx * cueLen;
+  const farY = nearY - dy * cueLen;
+  const px = -dy;
+  const py = dx;
+
+  drawPowerArc(ball, power);
+  const preview = cuePreview(ball, angle);
+
+  Xx.save();
+  Xx.globalAlpha = alpha;
+  Xx.setLineDash([8, 7]);
+  Xx.strokeStyle = `rgba(255,255,255,${.28 + power * .26})`;
+  Xx.lineWidth = 1.6;
+  preview.segments.forEach(seg => {
+    Xx.beginPath();
+    Xx.moveTo(seg.x1, seg.y1);
+    Xx.lineTo(seg.x2, seg.y2);
+    Xx.stroke();
+  });
+  Xx.setLineDash([]);
+  if (preview.secondary) {
+    Xx.strokeStyle = ball.pl === 'p1' ? 'rgba(255,178,178,.7)' : 'rgba(180,212,255,.7)';
+    Xx.beginPath();
+    Xx.moveTo(preview.secondary.x1, preview.secondary.y1);
+    Xx.lineTo(preview.secondary.x2, preview.secondary.y2);
+    Xx.stroke();
+  }
+  if (preview.collision) {
+    Xx.beginPath();
+    Xx.arc(preview.collision.x, preview.collision.y, 4.5, 0, Math.PI * 2);
+    Xx.fillStyle = 'rgba(255,245,214,.25)';
+    Xx.fill();
+  }
+
+  Xx.beginPath();
+  Xx.moveTo(farX + px * 5, farY + py * 5);
+  Xx.lineTo(farX - px * 5, farY - py * 5);
+  Xx.lineTo(nearX - px * 2.3, nearY - py * 2.3);
+  Xx.lineTo(nearX + px * 2.3, nearY + py * 2.3);
+  Xx.closePath();
+  const wood = Xx.createLinearGradient(farX, farY, nearX, nearY);
+  wood.addColorStop(0, '#7e4e26');
+  wood.addColorStop(.35, '#c7995b');
+  wood.addColorStop(.68, '#7f4f26');
+  wood.addColorStop(.92, '#f4ead1');
+  wood.addColorStop(1, '#2f2015');
+  Xx.fillStyle = wood;
+  Xx.fill();
+  Xx.strokeStyle = 'rgba(0,0,0,.3)';
+  Xx.lineWidth = 1;
+  Xx.stroke();
+  Xx.restore();
 }
 
 function drawCue() {
-  if (!sel || !aim || moving()) return;
-  const dx = sel.x - aim.x;
-  const dy = sel.y - aim.y;
-  const len = Math.hypot(dx, dy);
-  if (len < 10) return;
-  const nx = dx / len;
-  const ny = dy / len;
-  const power = Math.min(len / 95, 1);
-  const shake = power > .92 ? (Math.sin(performance.now() / 28) * (power - .92) * 8) : 0;
-  const pull = 18 + power * 42 + shake;
-  const cueLen = 148;
-  const startX = sel.x - nx * (BR + 7 + pull);
-  const startY = sel.y - ny * (BR + 7 + pull);
-  const endX = startX - nx * cueLen;
-  const endY = startY - ny * cueLen;
-  const hit = firstCollisionPoint(sel, nx, ny);
-
-  drawPowerArc(sel, power);
-
-  Xx.save();
-  Xx.setLineDash([6, 6]);
-  Xx.strokeStyle = `rgba(255,244,210,${.2 + power * .25})`;
-  Xx.lineWidth = 1.4;
-  Xx.beginPath();
-  Xx.moveTo(sel.x + nx * (BR + 2), sel.y + ny * (BR + 2));
-  Xx.lineTo(hit.x, hit.y);
-  Xx.stroke();
-  Xx.setLineDash([]);
-
-  Xx.beginPath(); Xx.arc(hit.x, hit.y, 5, 0, Math.PI * 2);
-  Xx.fillStyle = 'rgba(255,244,210,.18)'; Xx.fill();
-
-  Xx.strokeStyle = 'rgba(0,0,0,.24)';
-  Xx.lineWidth = 7;
-  Xx.beginPath(); Xx.moveTo(startX + 2, startY + 2); Xx.lineTo(endX + 2, endY + 2); Xx.stroke();
-
-  const cueGrad = Xx.createLinearGradient(startX, startY, endX, endY);
-  cueGrad.addColorStop(0, '#f3e7ca');
-  cueGrad.addColorStop(.05, '#1e2127');
-  cueGrad.addColorStop(.11, '#f3e7ca');
-  cueGrad.addColorStop(.54, '#c59a57');
-  cueGrad.addColorStop(.8, '#311909');
-  cueGrad.addColorStop(1, '#090503');
-  Xx.strokeStyle = cueGrad;
-  Xx.lineWidth = 5.5;
-  Xx.lineCap = 'round';
-  Xx.beginPath(); Xx.moveTo(startX, startY); Xx.lineTo(endX, endY); Xx.stroke();
-  Xx.restore();
+  if (moving()) return;
+  const ball = selectedBall();
+  if (cue.active && ball && !ball.out && !ball.pocket) drawCueActor(ball, cue.angle, cue.power, 1);
+  if (opponentAim.active) {
+    const oppBall = balls[opponentAim.ballIdx];
+    if (oppBall && !oppBall.out && !oppBall.pocket) drawCueActor(oppBall, opponentAim.angle || -Math.PI / 2, opponentAim.power || 0, .42);
+  }
 }
 
 function drawTableOverlay() {
@@ -2067,51 +2321,81 @@ function gp(e) {
   return { x:(point.clientX - r.left) / sc, y:(point.clientY - r.top) / sc };
 }
 
+function sendAimState() {
+  if (!cue.active) return send({ type:'aim', role:myRole, active:false });
+  send({ type:'aim', role:myRole, active:true, ballIdx:cue.ballIdx, angle:cue.angle, power:cue.power });
+}
+
+function legalCueBalls(role) {
+  return legalBallsFor(role).filter(ball => !ball.out && !ball.pocket);
+}
+
+function pickCueBall(point) {
+  const legal = legalCueBalls(myRole);
+  const tapped = legal.find(ball => Math.hypot(point.x - ball.x, point.y - ball.y) < BR + 16);
+  if (tapped) return { ball:tapped, startedOnBall:true };
+  if (legal.length === 1) return { ball:legal[0], startedOnBall:false };
+  return null;
+}
+
+function updateCueFromPoint(point) {
+  const ball = selectedBall();
+  if (!ball) return;
+  const vx = point.x - ball.x;
+  const vy = point.y - ball.y;
+  const dist = Math.hypot(vx, vy);
+  if (!cue.dragging || cue.mode === 'aim') {
+    if (dist > 8) cue.angle = Math.atan2(vy, vx);
+    const pull = -(vx * Math.cos(cue.angle) + vy * Math.sin(cue.angle));
+    if (pull > 12 && dist > 10) cue.mode = 'power';
+    cue.power = 0;
+  }
+  if (cue.mode === 'power') {
+    const pull = clamp(-(vx * Math.cos(cue.angle) + vy * Math.sin(cue.angle)), 0, 96);
+    cue.power = clamp(pull / 96, 0, 1);
+    if (cue.power < .04 && dist < 20) cue.mode = 'aim';
+  }
+  sendAimState();
+}
+
 function onDown(e) {
   e.preventDefault();
   AudioEngine.init();
   AudioEngine.resume();
   if (!canIShoot()) return;
-  const p = gp(e);
-  for (const b of balls) {
-    if (b.out || b.pocket || b.pl !== myRole) continue;
-    if (Math.hypot(p.x - b.x, p.y - b.y) < BR + 16) {
-      const marked = markedBallFor(myRole);
-      if (marked && !marked.out && b !== marked) continue;
-      sel = b;
-      aim = p;
-      send({ type:'aim-start', role:myRole, ballIdx:balls.indexOf(b) });
-      return;
-    }
+  const point = gp(e);
+  const chosen = pickCueBall(point);
+  if (!chosen) {
+    clearCue();
+    return;
   }
+  setCueBall(chosen.ball, chosen.startedOnBall);
+  cue.dragging = true;
+  cue.mode = 'aim';
+  updateCueFromPoint(point);
 }
 
 function onMove(e) {
-  if (!sel) return;
+  if (!cue.active || !cue.dragging) return;
   e.preventDefault();
-  aim = gp(e);
-}
-
-function clearAim(sendMsg = true) {
-  if (sendMsg) send({ type:'aim-end', role:myRole });
-  sel = null;
-  aim = null;
+  updateCueFromPoint(gp(e));
 }
 
 function onUp(e) {
-  if (!sel || !aim) return;
+  if (!cue.active) return;
   e.preventDefault();
-  const dx = sel.x - aim.x;
-  const dy = sel.y - aim.y;
-  const len = Math.hypot(dx, dy);
-  if (len > 10) {
-    const power = Math.min(len / 95, 1) * 16;
-    const vx = (dx / len) * power;
-    const vy = (dy / len) * power;
-    const idx = balls.indexOf(sel);
-    performShot(myRole, idx, vx, vy, phase === 'break');
+  cue.dragging = false;
+  const ball = selectedBall();
+  if (!ball) {
+    clearCue();
+    return;
   }
-  clearAim();
+  if (cue.power > .08) {
+    const vx = Math.cos(cue.angle) * cue.power * MAX_SHOT_POWER;
+    const vy = Math.sin(cue.angle) * cue.power * MAX_SHOT_POWER;
+    performShot(myRole, cue.ballIdx, vx, vy, phase === 'break');
+  }
+  clearCue();
   updateTurnUI();
   maybeScheduleAITurn();
 }
@@ -2119,11 +2403,11 @@ function onUp(e) {
 Cv.addEventListener('mousedown', onDown);
 Cv.addEventListener('mousemove', onMove);
 Cv.addEventListener('mouseup', onUp);
-Cv.addEventListener('mouseleave', () => { if (sel) clearAim(); });
+Cv.addEventListener('mouseleave', () => { if (cue.active) clearCue(); });
 Cv.addEventListener('touchstart', onDown, { passive:false });
 Cv.addEventListener('touchmove', onMove, { passive:false });
 Cv.addEventListener('touchend', onUp, { passive:false });
-Cv.addEventListener('touchcancel', () => { if (sel) clearAim(); }, { passive:false });
+Cv.addEventListener('touchcancel', () => { if (cue.active) clearCue(); }, { passive:false });
 
 function updateRematchStatus() {
   if (!rematch.mine && !rematch.opp) {

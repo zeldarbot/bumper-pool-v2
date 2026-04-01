@@ -35,23 +35,28 @@ body{
   -webkit-user-select:none;user-select:none;
   display:flex;justify-content:center;
 }
-.app{width:min(100%,980px);padding:10px 10px 14px;display:flex;flex-direction:column;align-items:center;gap:10px}
-h1{
-  font-size:clamp(1.1rem,4vw,1.7rem);letter-spacing:.28em;text-transform:uppercase;
-  color:var(--gold);text-shadow:0 2px 16px rgba(215,177,90,.35);margin-top:2px
-}
+.app{width:min(100%,1080px);padding:8px;display:flex;flex-direction:column;align-items:center;gap:8px}
+h1{display:none}
 .panel{
-  width:min(100%,760px);background:linear-gradient(180deg,rgba(20,40,30,.96),rgba(10,18,13,.98));
-  border:1px solid rgba(107,66,38,.25);border-radius:22px;box-shadow:0 18px 60px rgba(0,0,0,.45);backdrop-filter:blur(8px)
+  width:min(100%,980px);background:linear-gradient(180deg,rgba(13,24,18,.94),rgba(8,14,10,.97));
+  border:1px solid rgba(107,66,38,.28);border-radius:24px;box-shadow:0 20px 70px rgba(0,0,0,.5);backdrop-filter:blur(10px)
 }
-#lobby{padding:18px;display:flex;flex-direction:column;gap:18px}
-.section-title{font-size:.78rem;color:var(--gold);text-transform:uppercase;letter-spacing:.24em;margin-bottom:8px}
-.hero{
-  border:1px solid rgba(107,66,38,.28);border-radius:24px;padding:22px 20px;
+#lobby{
+  position:relative;height:calc(100dvh - 16px);padding:20px;display:flex;flex-direction:column;gap:16px;
+  overflow:auto;scroll-behavior:smooth;scroll-snap-type:y proximity
+}
+.section-title{font-size:.72rem;color:var(--gold);text-transform:uppercase;letter-spacing:.2em;margin-bottom:6px}
+.parallax-bg{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.px-layer{position:absolute;will-change:transform,opacity;filter:drop-shadow(0 20px 30px rgba(0,0,0,.35));opacity:.82}
+#px-cue{width:min(72vw,560px);right:-120px;top:18%;transform:translate3d(0,0,0) rotate(-8deg)}
+#px-ball{width:108px;left:8%;top:10%}
+#px-bumper{width:100px;right:8%;bottom:12%}
+.hero{position:relative;z-index:1;scroll-snap-align:start;
+  border:1px solid rgba(107,66,38,.3);border-radius:24px;padding:18px 18px;
   background:
-    radial-gradient(circle at top left,rgba(27,53,40,.45),transparent 36%),
-    linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.03)
+    radial-gradient(circle at top left,rgba(27,53,40,.5),transparent 42%),
+    linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04)
 }
 .hero-kicker{
   display:inline-flex;align-items:center;gap:8px;
@@ -61,9 +66,9 @@ h1{
 .hero-kicker::before{
   content:"";width:26px;height:1px;background:linear-gradient(90deg,var(--gold),transparent)
 }
-.hero h2{font-size:clamp(1.4rem,5vw,2rem);letter-spacing:.04em;line-height:1.05;margin-bottom:10px}
-.hero p{color:var(--muted);font-size:.92rem;line-height:1.55;max-width:42ch}
-.lobby-stage{position:relative;min-height:540px;overflow:hidden;border-radius:24px}
+.hero h2{font-size:clamp(1.3rem,4.4vw,1.85rem);letter-spacing:.03em;line-height:1.06;margin-bottom:6px}
+.hero p{color:var(--muted);font-size:.84rem;line-height:1.45;max-width:38ch}
+.lobby-stage{position:relative;min-height:500px;overflow:hidden;border-radius:24px;z-index:1;scroll-snap-align:start}
 .lobby-step{
   position:absolute;inset:0;opacity:0;transform:translateX(24px) scale(.985);
   pointer-events:none;transition:opacity .32s ease,transform .38s cubic-bezier(.2,.8,.2,1)
@@ -76,9 +81,9 @@ h1{
 }
 .step-shell{display:flex;flex-direction:column;gap:16px}
 .step-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
-.step-meta{font-size:.76rem;color:var(--gold);letter-spacing:.22em;text-transform:uppercase}
-.step-head h3{font-size:1.45rem;font-weight:normal;line-height:1.08}
-.step-copy{color:var(--muted);font-size:.9rem;line-height:1.5;max-width:42ch}
+.step-meta{font-size:.68rem;color:var(--gold);letter-spacing:.2em;text-transform:uppercase}
+.step-head h3{font-size:1.2rem;font-weight:normal;line-height:1.08}
+.step-copy{color:var(--muted);font-size:.8rem;line-height:1.35;max-width:34ch}
 .player-grid{display:grid;grid-template-columns:1fr;gap:12px}
 .player-card{
   width:100%;padding:16px 18px;border-radius:20px;text-align:left;cursor:pointer;
@@ -226,10 +231,15 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
   <h1>Bumper Pool</h1>
 
   <div id="lobby" class="panel">
+    <div class="parallax-bg" aria-hidden="true">
+      <img id="px-cue" class="px-layer" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAaQAAABQCAYAAABWOAGOAAAB20lEQVR4nO3dsS7FUBzA4V4RMUuZGgtvYHA3b0AsRkNXCR7CAyCxGowWiaeweAN3kTvRmG3kTiIRGm1vzzn9vvmmOcNtfz3/tGmWAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKMfFR53fLXa/FABSj0kbBAkgQeUcQ9IWQQIITBlhTNogSEBnNoq1QV1Yd4qlvpcQtYW+FwAAM4IEQBCM7CBR1eNl7+Oy7b2zvpdARAQJEo0BhOL+6T3L8/zXc6KqqpEgkRwxgDj9GKS31+fad3crq+ujVldE1MQAaBSkw6uLbwE6vb3Lzg/2/31Q5k8IgNgZ2bVADACaiz5IYgCQhsZBEgQAgghSvnXc60MNggiQhuhHdn0HcUYUAZqLPkghEEWAloJ0c3Qy+u97SIQhhCjO2C0Cre6QvOxKzGEURYiTkR3JEUWIkyBBB0QRvuxuLmfXD9M/pyeCBIkKIYpD+2IszfhAHwBBECQAgmBkB3RmMn3pfWw4T5NpO8cpx8UgR52D+rMADEUZWNTqPNQgSAB0HrY6QQKAQe3WAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACDr0yfG1Gpu647icgAAAABJRU5ErkJggg==">
+      <img id="px-ball" class="px-layer" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAC3UlEQVR4nO2du1LDMBBFJQ1VGn8LFY0r6rR8JW1qKjVUfIubtDAUmWGCreixq92V7m2ZgHOOVpLjoHUOQRAEmTXeGcnlI36Xvub8uqp/f34U2Fal+Bmga5bhZ4OuTYa3An59eS7+O/HzS70IrxX8WgGcUkgvEV4L+JUBOIUQbhFeGv4qAL5UBKcELwVfA/gSEVwSWH6pNfCSInwv+BbA54qglBAcYUaCn7puyvsXMgGjwe8lgaSU9i7GOvjcKal1OmqugFngH72v1kpoEjATfC4JXgP85XR6P/rZdr2+uYGnIy8Jf0mAtyCCQgLJLqgU/i/4Evi1r+EOxXRbLKB10WmFuCiT0Mon9Jx6qOAtiiS0LsrBGvzRJFSvAaNvN3vxCBbmfQtVUMutqgIw+um4BKujf5QqKK4AjH5aPsHK93YsJ8WxqAIw+uk5kT4RQ8oTcssGo78s97yOpiFUgHDYBXB/jLwp/Ji6WQB2PzzZ45pVAa3zP9co3ZSP/hxuWAOE000A9WjdlI/+3HStACpo2yDwdwVw7/9b4W3G4D+6H3hyArlBXIx/K4IiIgJKRGyDglchYBbIqWAbKhwIEA4ECAcChAMBwoEA4UCAcCBAOBCgTcD9f3jUHPmCHPO754sKEA4ECAcCLAjAOlCXHG5B62mCI2aPK6Yg4UCAVgG4H+Dd/9+CChBOkQDshug5JQVgN0STFMfiKQhVQMvnoQBUQVse8atahFEFdFyyBKAK6pLDrXobiiqg4RFabEJC+9FlRRUACfTnxhVPQVgP0hE5tG/WqSgSvO8qAZiKHNm5odUVMLOESHiGdNMUNKOESHyAd/MaMJOEyHB6Otmz31H7B3B30iB7IHN0MdarITK3MSF9IjaahNihhwy6KI3WRclyO6s4Sh+xv0EnvXTQS3L0XpJ/g26q/4N+wjP1E9Z8Nt15po7ae7mgp7yeXBhlaHugpOpiqKVog40gCOJ05QcGTaUZBfF0jQAAAABJRU5ErkJggg==">
+      <img id="px-bumper" class="px-layer" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAADcUlEQVR4nO2dMW7bQBBFOURaFwbcGMgpfAgVuoBaH0MxXAaJj8GWF9jCh/ApArgxkMIHSJoIUARSnNmd3Z3Z/b+1DJH/7fwVCXJmGCAIgiAIgnoUDU50vLv7I/2fl48P8+dHrZjtFQr1YLplGNSj8ZZAkBfjd/f34u94fX83D4KsGr+LMFwLSEkQZMn4XQbTU2CUAEG1zd8VND0GRm4I5Mn46eY3+7OPn7cuQJBl8yeB4VpASkOgkuZzjJ8UTU+BsQZCGwJZMH9imr5/+Mo+jvD2KxlGCQiU2/ytVT9dMV9ieAqQrYpYAqEFgWqZv2b8XtF0KQxpNWhAICvm7wsYzwFRGgKVNN+K8SkgtCGMQ+fmrx3HWkQunV/KDUWqYb4V4znVkLsSkiqgNfOXjk9SCTGKAsAtOW/mSyFoRBHlip5U8w9Pz9/W/jb/+P5zMBJHqVGUDEDb/MMV42uAiIEgASCKoJgSy2V+zOdjFBObEp8o5+rnHvxBwcjc1XBeCZpVMOaMnlY1LZznpR/cKlD7GXqpkqu/RBzl+gU3eo+eWhC0qkClAnqJnhznPWr/8qm1+q1G0ZZ/4gqw8BSDZUn9SY6gmOz3rv3GXqAGwMJzmy3omo+iCkD86PuUFEE9xo92DGW7EIOMA8h172YudKs6OwDO1S+0Lu5V8Vgz/2fl1Vp69WvsA9X3gFnJNG/RYwZA7/oyGND8b/XG3MfxuvJNVsAsNNO7+WYqQFoNLRhvFkCLJruJoB4FAJUFAJUFAF4BnD+cxH0hrjWFjYe1kgBcPtklbXzRu16ZT8ohgioLADwD6HkfCAr5LwaAfUDfp9F6T7UWdM3H5D2gxxgKSvETBQAxpOvPJgBpDLVeBUF4flv+qfwMTS1Dr9I4bxYAzlVxD3tByPCeWLYLsdYghEznwwYgrYKW9VjjLckl9RJFQRg9EokAxFyYeYcQIo4/25vyS+JEkVcIIbJXhESjBt0WIYQCjTqiK4D7JV4hBGbTJlMNm9ZK0RuEkNAxK0ZJdztb6RlXs3FfUgVw94O1kwlGqqFm10T0DfXeN/QkdM6NE3pHD430jj4J3dNlwvyA1uYHnIQJGjxhhkyrM2TOhSlK68IcsR7miJ0Lk/T+F2ZJ9jZL0mJXrpcep6le6oh5wnZ0xERtezo2OlMegiAIgqChjv4CrGuME3Qq6+UAAAAASUVORK5CYII=">
+    </div>
     <div class="hero">
-      <div class="hero-kicker">Private Match Flow</div>
-      <h2>Minimal setup. Fast handoff. Premium feel.</h2>
-      <p>Select your player card, create or join a room, and let the opponent identity and records sync automatically once the WebRTC link is live.</p>
+      <div class="hero-kicker">Bumper Pool</div>
+      <h2>Pick a player. Pick a mode. Break.</h2>
+      <p>Fast setup, clean table-first UX.</p>
     </div>
 
     <div class="lobby-stage">
@@ -238,9 +248,9 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
           <div class="step-head">
             <div>
               <div class="step-meta">Step 1</div>
-              <h3>Select your player</h3>
+              <h3>Choose player</h3>
             </div>
-            <div class="step-copy">Pick an existing profile or add a new one. Records shown here are total wins and losses across all saved matchups.</div>
+            <div class="step-copy">Tap a profile or add one.</div>
           </div>
           <div id="player-list" class="player-grid"></div>
           <div class="inline-actions">
@@ -262,24 +272,24 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
           <div class="step-head">
             <div>
               <div class="step-meta">Step 2</div>
-              <h3>Create, join, or play solo</h3>
+              <h3>Choose game mode</h3>
             </div>
-            <div class="step-copy">Create and join still use a private WebRTC room. AI mode skips the waiting room and starts a local match against the CPU instantly.</div>
+            <div class="step-copy">Create, join, or play CPU.</div>
           </div>
           <div class="mode-grid">
             <div class="action-card">
               <div>
                 <div class="section-title">Create</div>
-                <h4>Open a room</h4>
-                <p>Create a private table, then share the room code or direct link while the room waits for the second player.</p>
+                <h4>Host Room</h4>
+                <p>Get a code. Share. Play.</p>
               </div>
               <button class="primary-btn" id="create-btn">Create Room</button>
             </div>
             <div class="action-card">
               <div>
                 <div class="section-title">Join</div>
-                <h4>Enter a code</h4>
-                <p>Paste or type the four-character room code. Shared links still auto-fill the code on load.</p>
+                <h4>Join Room</h4>
+                <p>Enter 4-letter code.</p>
               </div>
               <input id="join-input" class="field" placeholder="CODE" maxlength="4" style="text-transform:uppercase">
               <button class="secondary-btn" id="join-btn">Join Room</button>
@@ -287,8 +297,8 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
             <div class="action-card">
               <div>
                 <div class="section-title">Solo</div>
-                <h4>Play vs AI</h4>
-                <p>Start immediately against a local CPU opponent. You play red as Player 1. The CPU plays white as Player 2.</p>
+                <h4>Play CPU</h4>
+                <p>Instant solo match.</p>
               </div>
               <button class="secondary-btn" id="ai-btn">Play vs AI</button>
             </div>
@@ -307,7 +317,7 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
               <div class="step-meta">Step 3</div>
               <h3 id="waiting-title">Waiting for opponent</h3>
             </div>
-            <div class="step-copy">Share the room and keep this screen open. Once the connection is established the game begins automatically.</div>
+            <div class="step-copy">Share code. Match starts on connect.</div>
           </div>
           <div class="room-display">
             <div class="section-title" style="margin-bottom:0">Room Code</div>
@@ -2533,6 +2543,22 @@ function requestRematch() {
 
 $('rb').onclick = requestRematch;
 
+function initLobbyParallax() {
+  const lobby = $('lobby');
+  const cue = $('px-cue');
+  const ball = $('px-ball');
+  const bumper = $('px-bumper');
+  if (!lobby || !cue || !ball || !bumper) return;
+  const render = () => {
+    const t = lobby.scrollTop || 0;
+    cue.style.transform = `translate3d(${t * -.07}px, ${t * .12}px, 0) rotate(-8deg)`;
+    ball.style.transform = `translate3d(${t * .06}px, ${t * .22}px, 0)`;
+    bumper.style.transform = `translate3d(${t * -.05}px, ${t * -.16}px, 0)`;
+  };
+  lobby.addEventListener('scroll', render, { passive:true });
+  render();
+}
+
 (function autoJoin() {
   const params = new URLSearchParams(window.location.search);
   const joinCode = params.get('join');
@@ -2552,6 +2578,7 @@ document.addEventListener('visibilitychange', () => {
 
 resize();
 updateMyProfile();
+initLobbyParallax();
 </script>
 </body>
 </html>

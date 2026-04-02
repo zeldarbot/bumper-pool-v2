@@ -7,8 +7,9 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Bumper Pool v2</title>
-<script>const APP_VERSION = 6;</script>
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>const APP_VERSION = 7;</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
@@ -613,7 +614,21 @@ $('back-to-mode-btn').addEventListener('click', () => {
   setLobbyStep('mode');
 });
 
-let peer, conn, isHost = false, myRole = null;
+// Firebase setup
+const fbApp = firebase.initializeApp({
+  apiKey: "AIzaSyDyOA8VkXwv-xxE9omX76TVcna9EO9pAhA",
+  authDomain: "zeldar-games.firebaseapp.com",
+  databaseURL: "https://zeldar-games-default-rtdb.firebaseio.com",
+  projectId: "zeldar-games",
+  storageBucket: "zeldar-games.firebasestorage.app",
+  messagingSenderId: "52478796128",
+  appId: "1:52478796128:web:b16b595d1366249d1ebe05"
+});
+const fbDb = firebase.database();
+let fbRoomRef = null, fbSendRef = null, fbRecvRef = null, fbPresRef = null;
+let fbListeners = [];
+
+let peer = null, conn = null, isHost = false, myRole = null;
 let isAI = false;
 let aiRole = 'p2';
 let connected = false;
@@ -726,13 +741,14 @@ function clearAITimers() {
 function destroyPeer() {
   clearConnectTimeout();
   stopHeartbeat();
-  if (conn) {
-    try { conn.close(); } catch(e) {}
-    conn = null;
-  }
-  if (peer && !peer.destroyed) {
-    try { peer.destroy(); } catch(e) {}
-  }
+  // Clean up Firebase listeners
+  fbListeners.forEach(fn => { try { fn(); } catch(e) {} });
+  fbListeners = [];
+  if (fbPresRef) { try { fbPresRef.remove(); } catch(e) {} fbPresRef = null; }
+  fbRoomRef = null; fbSendRef = null; fbRecvRef = null;
+  // Legacy PeerJS cleanup
+  if (conn) { try { conn.close(); } catch(e) {} conn = null; }
+  if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
   peer = null;
   connected = false;
   if (syncTimer) { clearInterval(syncTimer); syncTimer = null; }
@@ -751,8 +767,7 @@ function createGame() {
   showWaitingStep('Waiting for opponent', 'Your private room is live. Send the link or code to the other player.', true);
   setStatus('Creating room...');
   history.replaceState(null, '', '?join=' + currentCode);
-  // Small delay to let the old peer fully deregister from the signaling server
-  setTimeout(initPeerAsHost, 500);
+  initFirebaseHost();
 }
 
 function joinGame() {
@@ -767,9 +782,9 @@ function joinGame() {
   myRole = 'p2';
   scoreSyncSent = false;
   updateMyProfile();
-  showWaitingStep('Joining room', 'Connecting to the host and waiting for the handshake to complete.', false);
+  showWaitingStep('Joining room', 'Connecting to the host.', false);
   setStatus('Connecting...');
-  setTimeout(initPeerAsGuest, 300);
+  initFirebaseGuest();
 }
 
 function startAIGame() {
@@ -789,20 +804,6 @@ function startAIGame() {
   startGame();
 }
 
-const ICE_SERVERS = [
-  { urls:'stun:stun.l.google.com:19302' },
-  { urls:'stun:stun1.l.google.com:19302' },
-  { urls:'stun:stun.cloudflare.com:3478' },
-  { urls:'stun:stun.relay.metered.ca:80' },
-  { urls:'turn:global.relay.metered.ca:80', username:'openrelayproject', credential:'openrelayproject' },
-  { urls:'turn:global.relay.metered.ca:80?transport=tcp', username:'openrelayproject', credential:'openrelayproject' },
-  { urls:'turn:global.relay.metered.ca:443', username:'openrelayproject', credential:'openrelayproject' },
-  { urls:'turn:global.relay.metered.ca:443?transport=tcp', username:'openrelayproject', credential:'openrelayproject' },
-  { urls:'turns:global.relay.metered.ca:443', username:'openrelayproject', credential:'openrelayproject' },
-  { urls:'turn:openrelay.metered.ca:80', username:'openrelayproject', credential:'openrelayproject' },
-  { urls:'turn:openrelay.metered.ca:443', username:'openrelayproject', credential:'openrelayproject' }
-];
-
 let connectTimeout = null;
 
 function clearConnectTimeout() {
@@ -818,58 +819,126 @@ function startConnectTimeout(ms, msg) {
   }, ms);
 }
 
-function initPeerAsHost() {
-  peer = new Peer('bpool2-' + currentCode, {
-    debug:0,
-    config:{ iceServers:ICE_SERVERS }
+function fbSetupRoom(role) {
+  const roomPath = 'rooms/' + currentCode;
+  fbRoomRef = fbDb.ref(roomPath);
+  // Host sends on /host_msgs, receives on /guest_msgs (and vice versa)
+  fbSendRef = fbDb.ref(roomPath + (role === 'p1' ? '/host_msgs' : '/guest_msgs'));
+  fbRecvRef = fbDb.ref(roomPath + (role === 'p1' ? '/guest_msgs' : '/host_msgs'));
+  // Presence
+  fbPresRef = fbDb.ref(roomPath + '/presence/' + role);
+  fbPresRef.set(true);
+  fbPresRef.onDisconnect().remove();
+  // Listen for messages from the other player
+  const recvCb = fbRecvRef.on('child_added', snap => {
+    const data = snap.val();
+    if (data) handleMessage(data);
+    // Clean up processed messages to keep DB small
+    snap.ref.remove();
   });
-  startConnectTimeout(12000, 'Could not create room. Server may be busy.');
-  peer.on('open', () => {
-    reconnectAttempts = 0;
-    clearConnectTimeout();
-    setStatus('<span class="conn-dot conn-green"></span>Room ready. Waiting for opponent...');
-    // Timeout for waiting for opponent (generous — they might be typing the code)
-    startConnectTimeout(120000, 'No one joined. Room expired.');
-  });
-  peer.on('connection', c => { clearConnectTimeout(); conn = c; setupConn(); });
-  peer.on('disconnected', () => { if (!peer.destroyed) setTimeout(() => peer.reconnect(), 1000); });
-  peer.on('error', e => {
-    clearConnectTimeout();
-    if (e.type === 'unavailable-id') {
+  fbListeners.push(() => fbRecvRef.off('child_added', recvCb));
+}
+
+function initFirebaseHost() {
+  const roomPath = 'rooms/' + currentCode;
+  const roomRef = fbDb.ref(roomPath);
+  startConnectTimeout(10000, 'Could not create room.');
+  // Check if room already exists
+  roomRef.child('created').once('value', snap => {
+    if (snap.exists()) {
+      clearConnectTimeout();
       setStatus('<span class="conn-dot conn-red"></span>Room code in use. <button class="chip" style="display:inline;width:auto;min-height:36px;padding:0 16px;font-size:.85rem;margin-left:8px" onclick="location.reload()">Try Again</button>');
       return;
     }
-    setStatus('<span class="conn-dot conn-red"></span>Connection error. <button class="chip" style="display:inline;width:auto;min-height:36px;padding:0 16px;font-size:.85rem;margin-left:8px" onclick="location.reload()">Retry</button>');
-    scheduleReconnect();
+    // Create room
+    roomRef.set({ created: firebase.database.ServerValue.TIMESTAMP, host: true }).then(() => {
+      clearConnectTimeout();
+      fbSetupRoom('p1');
+      setStatus('<span class="conn-dot conn-green"></span>Room ready. Waiting for opponent...');
+      startConnectTimeout(180000, 'No one joined. Room expired.');
+      // Watch for guest joining
+      const presRef = fbDb.ref(roomPath + '/presence/p2');
+      const presCb = presRef.on('value', snap => {
+        if (snap.val() && !connected) {
+          clearConnectTimeout();
+          connected = true;
+          scoreSyncSent = false;
+          reconnectAttempts = 0;
+          lastPong = Date.now();
+          hideDisconnectOverlay();
+          setStatus('<span class="conn-dot conn-green"></span>Connected.');
+          startHeartbeat();
+          drainQueue();
+          sendProfile();
+          if (!gameStarted) setTimeout(startGame, 500);
+        } else if (!snap.val() && connected) {
+          connected = false;
+          scoreSyncSent = false;
+          if (gameStarted) { showDisconnectOverlay(); }
+          else setStatus('<span class="conn-dot conn-red"></span>Opponent disconnected.');
+        }
+      });
+      fbListeners.push(() => presRef.off('value', presCb));
+    }).catch(() => {
+      clearConnectTimeout();
+      setStatus('<span class="conn-dot conn-red"></span>Failed to create room. <button class="chip" style="display:inline;width:auto;min-height:36px;padding:0 16px;font-size:.85rem;margin-left:8px" onclick="location.reload()">Retry</button>');
+    });
   });
 }
 
-function initPeerAsGuest() {
-  peer = new Peer(null, {
-    debug:0,
-    config:{ iceServers:ICE_SERVERS }
-  });
-  startConnectTimeout(15000, 'Could not connect. Room may not exist or host may be offline.');
-  peer.on('open', () => {
-    setStatus('Found server. Connecting to room...');
-    conn = peer.connect('bpool2-' + currentCode, { reliable:true, serialization:'json' });
-    if (!conn) {
-      setStatus('<span class="conn-dot conn-red"></span>Failed to create connection. <button class="chip" style="display:inline;width:auto;min-height:36px;padding:0 16px;font-size:.85rem;margin-left:8px" onclick="location.reload()">Retry</button>');
-      return;
-    }
-    setupConn();
-  });
-  peer.on('disconnected', () => { if (!peer.destroyed) setTimeout(() => peer.reconnect(), 1000); });
-  peer.on('error', e => {
-    clearConnectTimeout();
-    if (e.type === 'peer-unavailable') {
+function initFirebaseGuest() {
+  const roomPath = 'rooms/' + currentCode;
+  const roomRef = fbDb.ref(roomPath);
+  startConnectTimeout(10000, 'Could not connect. Room may not exist or host may be offline.');
+  roomRef.child('created').once('value', snap => {
+    if (!snap.exists()) {
+      clearConnectTimeout();
       setStatus('<span class="conn-dot conn-red"></span>Room not found. Check the code. <button class="chip" style="display:inline;width:auto;min-height:36px;padding:0 16px;font-size:.85rem;margin-left:8px" onclick="location.reload()">Try Again</button>');
       return;
     }
-    setStatus('<span class="conn-dot conn-red"></span>Connection error. <button class="chip" style="display:inline;width:auto;min-height:36px;padding:0 16px;font-size:.85rem;margin-left:8px" onclick="location.reload()">Retry</button>');
-    scheduleReconnect();
+    fbSetupRoom('p2');
+    clearConnectTimeout();
+    connected = true;
+    scoreSyncSent = false;
+    reconnectAttempts = 0;
+    lastPong = Date.now();
+    hideDisconnectOverlay();
+    setStatus('<span class="conn-dot conn-green"></span>Connected.');
+    startHeartbeat();
+    drainQueue();
+    sendProfile();
+    if (!gameStarted) setTimeout(startGame, 500);
+    else send({ type:'sync-request' });
+    // Watch host presence
+    const presRef = fbDb.ref(roomPath + '/presence/p1');
+    const presCb = presRef.on('value', snap => {
+      if (snap.val()) {
+        if (!connected) {
+          connected = true;
+          lastPong = Date.now();
+          hideDisconnectOverlay();
+          setStatus('<span class="conn-dot conn-green"></span>Connected.');
+        }
+      } else if (connected) {
+        connected = false;
+        if (gameStarted) showDisconnectOverlay();
+        else setStatus('<span class="conn-dot conn-red"></span>Host disconnected.');
+      }
+    });
+    fbListeners.push(() => presRef.off('value', presCb));
   });
 }
+
+// Legacy PeerJS stubs (referenced by retry button and other code paths)
+function initPeerAsHost() { initFirebaseHost(); }
+function initPeerAsGuest() { initFirebaseGuest(); }
+
+// Clean up room on page unload
+window.addEventListener('beforeunload', () => {
+  if (fbPresRef) try { fbPresRef.remove(); } catch(e) {}
+  // If host, remove entire room when leaving
+  if (isHost && fbRoomRef) try { fbRoomRef.remove(); } catch(e) {}
+});
 
 function resetLobbyMenuSoon() {
   setTimeout(() => {
@@ -877,40 +946,12 @@ function resetLobbyMenuSoon() {
   }, 1500);
 }
 
-function setupConn() {
-  conn.on('open', () => {
-    connected = true;
-    scoreSyncSent = false;
-    reconnectAttempts = 0;
-    lastPong = Date.now();
-    clearConnectTimeout();
-    hideDisconnectOverlay();
-    setStatus('<span class="conn-dot conn-green"></span>Connected.');
-    startHeartbeat();
-    drainQueue();
-    sendProfile();
-    if (!gameStarted) setTimeout(startGame, 500);
-    else if (!isHost) send({ type:'sync-request' });
-  });
-  conn.on('data', handleMessage);
-  conn.on('close', () => {
-    connected = false;
-    scoreSyncSent = false;
-    stopHeartbeat();
-    if (gameStarted) {
-      showDisconnectOverlay();
-      scheduleReconnect();
-    } else {
-      setStatus('<span class="conn-dot conn-red"></span>Opponent disconnected.');
-    }
-  });
-  conn.on('error', () => {});
-}
+// setupConn not needed — Firebase listeners set up in fbSetupRoom/initFirebaseHost/initFirebaseGuest
 
 function send(msg) {
   if (isAI) return false;
-  if (conn && conn.open && connected) {
-    try { conn.send(msg); return true; } catch(e) {}
+  if (fbSendRef && connected) {
+    try { fbSendRef.push(msg); return true; } catch(e) {}
   }
   if (['shot','break-aim','state-sync','profile','score-sync','aim','foul','rematch-request','rematch-start'].includes(msg.type)) {
     msgQueue.push({ msg, time: Date.now() });
@@ -922,24 +963,20 @@ function send(msg) {
 function drainQueue() {
   const queued = [...msgQueue];
   msgQueue = [];
-  queued.forEach(item => { try { conn.send(item.msg); } catch(e) {} });
+  queued.forEach(item => { if (fbSendRef) try { fbSendRef.push(item.msg); } catch(e) {} });
 }
 
 function startHeartbeat() {
   stopHeartbeat();
   heartbeatTimer = setInterval(() => {
-    if (conn && conn.open) {
-      try { conn.send({ type:'ping', t: Date.now() }); } catch(e) {}
+    // Update our presence timestamp
+    if (fbPresRef && connected) {
+      try { fbPresRef.set(Date.now()); } catch(e) {}
     }
-    const elapsed = Date.now() - lastPong;
-    connQuality = elapsed > 6000 ? 'red' : elapsed > 3000 ? 'yellow' : 'green';
+    // Firebase presence handles disconnect detection via onValue watchers
+    connQuality = connected ? 'green' : 'red';
     updateConnStatus();
-    if (elapsed > 12000 && connected) {
-      connected = false;
-      showDisconnectOverlay();
-      scheduleReconnect();
-    }
-  }, 2000);
+  }, 3000);
 }
 
 function stopHeartbeat() {
@@ -958,16 +995,14 @@ function updateConnStatus() {
 }
 
 function scheduleReconnect() {
-  if (reconnectTimer || reconnectAttempts >= MAX_RECONNECT) return;
-  reconnectAttempts++;
-  const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts - 1), 8000);
+  // Firebase handles reconnection automatically
+  if (reconnectTimer) return;
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null;
     if (connected) return;
-    if (peer && !peer.destroyed && peer.disconnected) peer.reconnect();
-    else if (isHost) initPeerAsHost();
-    else initPeerAsGuest();
-  }, delay);
+    // Firebase SDK auto-reconnects; just re-check presence
+    if (fbPresRef) fbPresRef.set(Date.now());
+  }, 3000);
 }
 
 function showDisconnectOverlay() { $('dc-overlay').classList.add('show'); }
@@ -977,9 +1012,9 @@ $('retry-btn').onclick = () => {
   reconnectAttempts = 0;
   if (reconnectTimer) clearTimeout(reconnectTimer);
   reconnectTimer = null;
-  if (peer && !peer.destroyed && peer.disconnected) peer.reconnect();
-  else if (isHost) initPeerAsHost();
-  else initPeerAsGuest();
+  // Re-establish Firebase presence
+  if (fbPresRef) fbPresRef.set(Date.now());
+  hideDisconnectOverlay();
 };
 
 $('copy-btn').onclick = () => {
@@ -2574,7 +2609,7 @@ document.addEventListener('visibilitychange', () => {
   AudioEngine.resume();
   if (isAI) return;
   if (!connected && gameStarted) $('retry-btn').click();
-  else if (peer && peer.disconnected && !peer.destroyed) peer.reconnect();
+  // Firebase SDK auto-reconnects on visibility change
 });
 
 resize();

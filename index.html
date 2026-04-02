@@ -719,52 +719,64 @@ function clearAITimers() {
   opponentAim = { active:false, ballIdx:-1, angle:-Math.PI / 2, power:0 };
 }
 
+function destroyPeer() {
+  clearConnectTimeout();
+  stopHeartbeat();
+  if (conn) {
+    try { conn.close(); } catch(e) {}
+    conn = null;
+  }
+  if (peer && !peer.destroyed) {
+    try { peer.destroy(); } catch(e) {}
+  }
+  peer = null;
+  connected = false;
+  if (syncTimer) { clearInterval(syncTimer); syncTimer = null; }
+}
+
 function createGame() {
   if (!ensurePlayerSelected()) return;
   AudioEngine.init();
+  destroyPeer();
   isAI = false;
   currentCode = genCode();
   isHost = true;
   myRole = 'p1';
-  connected = false;
   scoreSyncSent = false;
   updateMyProfile();
   showWaitingStep('Waiting for opponent', 'Your private room is live. Send the link or code to the other player.', true);
   setStatus('Creating room...');
   history.replaceState(null, '', '?join=' + currentCode);
-  initPeerAsHost();
+  // Small delay to let the old peer fully deregister from the signaling server
+  setTimeout(initPeerAsHost, 500);
 }
 
 function joinGame() {
   if (!ensurePlayerSelected()) return;
   AudioEngine.init();
+  destroyPeer();
   isAI = false;
   const code = $('join-input').value.toUpperCase().trim();
   if (code.length !== 4) { setStatus('Enter a valid four-character code.'); return; }
   currentCode = code;
   isHost = false;
   myRole = 'p2';
-  connected = false;
   scoreSyncSent = false;
   updateMyProfile();
   showWaitingStep('Joining room', 'Connecting to the host and waiting for the handshake to complete.', false);
   setStatus('Connecting...');
-  initPeerAsGuest();
+  setTimeout(initPeerAsGuest, 300);
 }
 
 function startAIGame() {
   if (!ensurePlayerSelected()) return;
   AudioEngine.init();
-  if (peer && !peer.destroyed) { try { peer.destroy(); } catch (e) {} }
-  peer = null;
-  conn = null;
-  connected = false;
+  destroyPeer();
   isHost = false;
   isAI = true;
   currentCode = '';
   myRole = 'p1';
   scoreSyncSent = false;
-  stopHeartbeat();
   clearAITimers();
   playerProfiles.p1 = { name: selectedPlayer || 'Player 1' };
   playerProfiles.p2 = { name: 'CPU' };
@@ -799,7 +811,6 @@ function startConnectTimeout(ms, msg) {
 }
 
 function initPeerAsHost() {
-  if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
   peer = new Peer('bpool2-' + currentCode, {
     debug:0,
     config:{ iceServers:ICE_SERVERS }
@@ -826,7 +837,6 @@ function initPeerAsHost() {
 }
 
 function initPeerAsGuest() {
-  if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
   peer = new Peer(null, {
     debug:0,
     config:{ iceServers:ICE_SERVERS }

@@ -773,30 +773,54 @@ function startAIGame() {
   startGame();
 }
 
+const ICE_SERVERS = [
+  { urls:'stun:stun.l.google.com:19302' },
+  { urls:'stun:stun1.l.google.com:19302' },
+  { urls:'stun:stun.cloudflare.com:3478' },
+  { urls:'turn:openrelay.metered.ca:80', username:'openrelayproject', credential:'openrelayproject' },
+  { urls:'turn:openrelay.metered.ca:443', username:'openrelayproject', credential:'openrelayproject' },
+  { urls:'turns:openrelay.metered.ca:443', username:'openrelayproject', credential:'openrelayproject' },
+  { urls:'turn:relay1.expressturn.com:3478', username:'efJNO2JILFKQ2FTPUP', credential:'M3k4YOhpGGzQSuI0' }
+];
+
+let connectTimeout = null;
+
+function clearConnectTimeout() {
+  if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
+}
+
+function startConnectTimeout(ms, msg) {
+  clearConnectTimeout();
+  connectTimeout = setTimeout(() => {
+    if (!connected && !isAI) {
+      setStatus('<span class="conn-dot conn-red"></span>' + msg + ' <button class="chip" style="display:inline;width:auto;min-height:36px;padding:0 16px;font-size:.85rem;margin-left:8px" onclick="location.reload()">Retry</button>');
+    }
+  }, ms);
+}
+
 function initPeerAsHost() {
   if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
   peer = new Peer('bpool2-' + currentCode, {
     debug:0,
-    config:{ iceServers:[
-      { urls:'stun:stun.l.google.com:19302' },
-      { urls:'stun:stun1.l.google.com:19302' },
-      { urls:'stun:stun2.l.google.com:19302' },
-      { urls:'turn:openrelay.metered.ca:80', username:'openrelayproject', credential:'openrelayproject' },
-      { urls:'turn:openrelay.metered.ca:443', username:'openrelayproject', credential:'openrelayproject' }
-    ] }
+    config:{ iceServers:ICE_SERVERS }
   });
+  startConnectTimeout(12000, 'Could not create room. Server may be busy.');
   peer.on('open', () => {
     reconnectAttempts = 0;
+    clearConnectTimeout();
     setStatus('<span class="conn-dot conn-green"></span>Room ready. Waiting for opponent...');
+    // Timeout for waiting for opponent (generous — they might be typing the code)
+    startConnectTimeout(120000, 'No one joined. Room expired.');
   });
-  peer.on('connection', c => { conn = c; setupConn(); });
+  peer.on('connection', c => { clearConnectTimeout(); conn = c; setupConn(); });
   peer.on('disconnected', () => { if (!peer.destroyed) setTimeout(() => peer.reconnect(), 1000); });
   peer.on('error', e => {
+    clearConnectTimeout();
     if (e.type === 'unavailable-id') {
-      setStatus('Room code already in use.');
-      resetLobbyMenuSoon();
+      setStatus('<span class="conn-dot conn-red"></span>Room code in use. <button class="chip" style="display:inline;width:auto;min-height:36px;padding:0 16px;font-size:.85rem;margin-left:8px" onclick="location.reload()">Try Again</button>');
       return;
     }
+    setStatus('<span class="conn-dot conn-red"></span>Connection error. <button class="chip" style="display:inline;width:auto;min-height:36px;padding:0 16px;font-size:.85rem;margin-left:8px" onclick="location.reload()">Retry</button>');
     scheduleReconnect();
   });
 }
@@ -805,25 +829,21 @@ function initPeerAsGuest() {
   if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
   peer = new Peer(null, {
     debug:0,
-    config:{ iceServers:[
-      { urls:'stun:stun.l.google.com:19302' },
-      { urls:'stun:stun1.l.google.com:19302' },
-      { urls:'stun:stun2.l.google.com:19302' },
-      { urls:'turn:openrelay.metered.ca:80', username:'openrelayproject', credential:'openrelayproject' },
-      { urls:'turn:openrelay.metered.ca:443', username:'openrelayproject', credential:'openrelayproject' }
-    ] }
+    config:{ iceServers:ICE_SERVERS }
   });
+  startConnectTimeout(15000, 'Could not connect. Room may not exist or host may be offline.');
   peer.on('open', () => {
     conn = peer.connect('bpool2-' + currentCode, { reliable:true, serialization:'json' });
     setupConn();
   });
   peer.on('disconnected', () => { if (!peer.destroyed) setTimeout(() => peer.reconnect(), 1000); });
   peer.on('error', e => {
+    clearConnectTimeout();
     if (e.type === 'peer-unavailable') {
-      setStatus('Room not found. Check the code.');
-      resetLobbyMenuSoon();
+      setStatus('<span class="conn-dot conn-red"></span>Room not found. Check the code. <button class="chip" style="display:inline;width:auto;min-height:36px;padding:0 16px;font-size:.85rem;margin-left:8px" onclick="location.reload()">Try Again</button>');
       return;
     }
+    setStatus('<span class="conn-dot conn-red"></span>Connection error. <button class="chip" style="display:inline;width:auto;min-height:36px;padding:0 16px;font-size:.85rem;margin-left:8px" onclick="location.reload()">Retry</button>');
     scheduleReconnect();
   });
 }
@@ -840,6 +860,7 @@ function setupConn() {
     scoreSyncSent = false;
     reconnectAttempts = 0;
     lastPong = Date.now();
+    clearConnectTimeout();
     hideDisconnectOverlay();
     setStatus('<span class="conn-dot conn-green"></span>Connected.');
     startHeartbeat();

@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Bumper Pool v2</title>
-<script>const APP_VERSION = 9;</script>
+<script>const APP_VERSION = 10;</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
@@ -1061,6 +1061,8 @@ let cue = { active:false, ballIdx:-1, angle:-Math.PI / 2, power:0, dragging:fals
 let firing = false;
 let sunkThisTurn = false;
 let pocketBursts = [];
+let flameParticles = [];
+let pocketGlows = [];
 let opponentAim = { active:false, ballIdx:-1, angle:-Math.PI / 2, power:0 };
 let turnMeta = freshTurnMeta();
 let penaltyState = null;
@@ -1199,6 +1201,8 @@ function initGameState() {
   sunkThisTurn = false;
   balls = rackBalls();
   pocketBursts = [];
+  flameParticles = [];
+  pocketGlows = [];
   opponentAim = { active:false, ballIdx:-1, angle:-Math.PI / 2, power:0 };
   turnMeta = freshTurnMeta();
   penaltyState = null;
@@ -1876,6 +1880,7 @@ function startSink(b, pocket, isPenaltyDrop = false) {
   if (!isPenaltyDrop) registerPocketEvent(b, pocket);
   b.pocket = { x:pocket.x, y:pocket.y, t:0 };
   pocketBursts.push({ x:pocket.x, y:pocket.y, life:1, hue:b.pl === 'p1' ? 'rgba(234,98,98,' : 'rgba(255,255,255,' });
+  pocketGlows.push({ x:pocket.x, y:pocket.y, life:1, color:b.pl === 'p1' ? [234,98,98] : [255,240,200] });
   AudioEngine.pocket();
   // Only keep your turn if you sank YOUR OWN ball in the correct pocket
   if (!isPenaltyDrop && b.pl === curP && pocket.targetFor === b.pl) sunkThisTurn = true;
@@ -2003,6 +2008,35 @@ function phys() {
   }
 
   pocketBursts = pocketBursts.filter(b => (b.life -= .07) > 0);
+
+  // Spawn flame trail particles for fast-moving balls
+  for (const b of balls) {
+    if (b.out || b.pocket) continue;
+    const speed = Math.hypot(b.vx, b.vy);
+    if (speed > MAX_SHOT_POWER * 0.85) {
+      const intensity = (speed - MAX_SHOT_POWER * 0.85) / (MAX_SHOT_POWER * 0.15);
+      for (let i = 0; i < Math.ceil(intensity * 3); i++) {
+        flameParticles.push({
+          x: b.x - b.vx * 0.3 + (Math.random() - 0.5) * 6,
+          y: b.y - b.vy * 0.3 + (Math.random() - 0.5) * 6,
+          vx: -b.vx * 0.08 + (Math.random() - 0.5) * 1.5,
+          vy: -b.vy * 0.08 + (Math.random() - 0.5) * 1.5 - 0.8,
+          life: 1,
+          size: 2 + Math.random() * 4 * intensity,
+          hue: b.pl === 'p1' ? 0 : 30 // red vs orange-gold
+        });
+      }
+    }
+  }
+  // Update flame particles
+  flameParticles = flameParticles.filter(p => {
+    p.x += p.vx; p.y += p.vy;
+    p.life -= 0.06;
+    p.size *= 0.96;
+    return p.life > 0;
+  });
+  // Update pocket glows
+  pocketGlows = pocketGlows.filter(g => { g.life -= 0.025; return g.life > 0; });
 }
 
 function bounceFromPocket(b, pocket) {
@@ -2114,6 +2148,48 @@ function drawPockets() {
       Xx.fillStyle = burst.hue + (burst.life * .55) + ')';
       Xx.fill();
     }
+    Xx.restore();
+  });
+
+  // Pocket glow effect — radiating light when a ball is sunk
+  pocketGlows.forEach(g => {
+    Xx.save();
+    const [r, gr, b] = g.color;
+    const pulse = 1 + Math.sin(g.life * Math.PI * 3) * 0.15;
+    const radius = (PR + 12 + (1 - g.life) * 25) * pulse;
+    const grad = Xx.createRadialGradient(g.x, g.y, 0, g.x, g.y, radius);
+    grad.addColorStop(0, `rgba(${r},${gr},${b},${g.life * 0.6})`);
+    grad.addColorStop(0.4, `rgba(${r},${gr},${b},${g.life * 0.25})`);
+    grad.addColorStop(1, `rgba(${r},${gr},${b},0)`);
+    Xx.fillStyle = grad;
+    Xx.beginPath(); Xx.arc(g.x, g.y, radius, 0, Math.PI * 2);
+    Xx.fill();
+    // Inner bright ring
+    Xx.beginPath(); Xx.arc(g.x, g.y, PR + 4, 0, Math.PI * 2);
+    Xx.strokeStyle = `rgba(${r},${gr},${b},${g.life * 0.7})`;
+    Xx.lineWidth = 3 * g.life; Xx.stroke();
+    Xx.restore();
+  });
+}
+
+function drawFlameTrails() {
+  flameParticles.forEach(p => {
+    Xx.save();
+    const grad = Xx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+    if (p.hue === 0) {
+      // Red player — red/orange/yellow flame
+      grad.addColorStop(0, `rgba(255,255,${Math.floor(100 + p.life * 155)},${p.life * 0.9})`);
+      grad.addColorStop(0.3, `rgba(255,${Math.floor(120 * p.life)},0,${p.life * 0.7})`);
+      grad.addColorStop(1, `rgba(180,30,0,0)`);
+    } else {
+      // White player — white/gold/blue flame
+      grad.addColorStop(0, `rgba(255,255,255,${p.life * 0.9})`);
+      grad.addColorStop(0.3, `rgba(255,220,${Math.floor(120 + p.life * 80)},${p.life * 0.6})`);
+      grad.addColorStop(1, `rgba(200,170,100,0)`);
+    }
+    Xx.fillStyle = grad;
+    Xx.beginPath(); Xx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    Xx.fill();
     Xx.restore();
   });
 }
@@ -2449,6 +2525,7 @@ function draw() {
   drawTableOverlay();
   drawPockets();
   drawBumpers();
+  drawFlameTrails();
   balls.forEach(drawBall);
   drawCue();
 }

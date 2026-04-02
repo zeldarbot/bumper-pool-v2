@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Bumper Pool v2</title>
-<script>const APP_VERSION = 10;</script>
+<script>const APP_VERSION = 11;</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
@@ -312,7 +312,7 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
     <div id="table-shell">
       <canvas id="c"></canvas>
     </div>
-    <div id="ins">Tap a legal ball to select it. Drag anywhere to aim, pull the cue back for power, then release to shoot. On the break, marked balls still bank to each player’s outside rail.</div>
+    <div id="ins" style="display:none"></div>
   </div>
 
   <div id="foul-banner" class="foul-banner">Foul</div>
@@ -583,7 +583,7 @@ function updatePlayerPrompt() {
   $('continue-btn').style.display = selectedPlayer ? 'inline-flex' : 'none';
 }
 
-// Skip player selection — go straight to mode select
+// Skip player selection - go straight to mode select
 selectedPlayer = 'Player 1';
 setLobbyStep('mode');
 
@@ -946,7 +946,7 @@ function resetLobbyMenuSoon() {
   }, 1500);
 }
 
-// setupConn not needed — Firebase listeners set up in fbSetupRoom/initFirebaseHost/initFirebaseGuest
+// setupConn not needed - Firebase listeners set up in fbSetupRoom/initFirebaseHost/initFirebaseGuest
 
 function send(msg) {
   if (isAI) return false;
@@ -1083,10 +1083,10 @@ const POCKETS = [
 // Vertical arm (in line with pockets): red, white, gap, white, red
 // Horizontal arm: white, red, gap, red, white
 const BUMPERS = [
-  // Pocket bumpers — flanking pocket entrance (pocket is at IT+11/IB-11)
+  // Pocket bumpers - flanking pocket entrance (pocket is at IT+11/IB-11)
   { x: CX - 39, y: IT + 29, col: 'white' }, { x: CX + 39, y: IT + 29, col: 'white' },
   { x: CX - 39, y: IB - 29, col: 'red' }, { x: CX + 39, y: IB - 29, col: 'red' },
-  // Center cross — symmetric square pattern (same spacing both arms)
+  // Center cross - symmetric square pattern (same spacing both arms)
   // Vertical arm
   { x: CX, y: CY - 90, col: 'red' }, { x: CX, y: CY - 45, col: 'white' },
   { x: CX, y: CY + 45, col: 'white' }, { x: CX, y: CY + 90, col: 'red' },
@@ -1162,13 +1162,13 @@ function rackBalls() {
   const p1y = IB - frontOffset;
   const p2y = IT + frontOffset;
   return [
-    // Red balls — P1 home is bottom pocket
+    // Red balls - P1 home is bottom pocket
     mk(CX, p1y, '#c92b2b', 'p1', true),                           // marked, centered
     mk(x1, IB - pairY, '#b81f1f', 'p1', false),                  // far left
     mk(x2, IB - pairY, '#b81f1f', 'p1', false),                  // left
     mk(x3, IB - pairY, '#b81f1f', 'p1', false),                  // right
     mk(x4, IB - pairY, '#b81f1f', 'p1', false),                  // far right
-    // White balls — P2 home is top pocket
+    // White balls - P2 home is top pocket
     mk(CX, p2y, '#eceef2', 'p2', true),                           // marked, centered
     mk(x1, IT + pairY, '#dadfe7', 'p2', false),                  // far left
     mk(x2, IT + pairY, '#dadfe7', 'p2', false),                  // left
@@ -1335,7 +1335,7 @@ function autoShowCue() {
     const target = targetPocketFor(myRole);
     if (target) cue.angle = Math.atan2(target.y - legal[0].y, target.x - legal[0].x);
   } else if (legal.length > 1 && !cue.active) {
-    // Multiple legal balls — select the first one as default
+    // Multiple legal balls - select the first one as default
     setCueBall(legal[0], false);
     const target = targetPocketFor(myRole);
     if (target) cue.angle = Math.atan2(target.y - legal[0].y, target.x - legal[0].x);
@@ -1918,7 +1918,7 @@ function phys() {
     const dynamicFriction = FRICTION + (1 - FRICTION) * speedFactor * .35;
     b.vx *= dynamicFriction;
     b.vy *= dynamicFriction;
-    // Gentle final deceleration — balls slow to a natural stop, not instant
+    // Gentle final deceleration - balls slow to a natural stop, not instant
     if (speed < .5 && speed > STOP_EPS) {
       const brake = .92;
       b.vx *= brake;
@@ -2151,7 +2151,7 @@ function drawPockets() {
     Xx.restore();
   });
 
-  // Pocket glow effect — radiating light when a ball is sunk
+  // Pocket glow effect - radiating light when a ball is sunk
   pocketGlows.forEach(g => {
     Xx.save();
     const [r, gr, b] = g.color;
@@ -2177,12 +2177,12 @@ function drawFlameTrails() {
     Xx.save();
     const grad = Xx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
     if (p.hue === 0) {
-      // Red player — red/orange/yellow flame
+      // Red player - red/orange/yellow flame
       grad.addColorStop(0, `rgba(255,255,${Math.floor(100 + p.life * 155)},${p.life * 0.9})`);
       grad.addColorStop(0.3, `rgba(255,${Math.floor(120 * p.life)},0,${p.life * 0.7})`);
       grad.addColorStop(1, `rgba(180,30,0,0)`);
     } else {
-      // White player — white/gold/blue flame
+      // White player - white/gold/blue flame
       grad.addColorStop(0, `rgba(255,255,255,${p.life * 0.9})`);
       grad.addColorStop(0.3, `rgba(255,220,${Math.floor(120 + p.life * 80)},${p.life * 0.6})`);
       grad.addColorStop(1, `rgba(200,170,100,0)`);
@@ -2363,7 +2363,7 @@ function cuePreview(ball, angle) {
   const dx = Math.cos(angle);
   const dy = Math.sin(angle);
   const start = { x:ball.x + dx * (BR + 2), y:ball.y + dy * (BR + 2) };
-  // Single segment only — stop at first ball, rail, or max length
+  // Single segment only - stop at first ball, rail, or max length
   const firstBall = rayToBall(ball, dx, dy);
   const firstRail = rayToRail(ball.x, ball.y, dx, dy);
   let endX = start.x + dx * CUE_PREVIEW_LEN;
@@ -2416,7 +2416,7 @@ function drawCueActor(ball, angle, power, alpha = 1) {
     Xx.fill();
   }
 
-  // Full pool cue rendering — tip → ferrule → shaft → joint → wrap → butt → bumper
+  // Full pool cue rendering - tip → ferrule → shaft → joint → wrap → butt → bumper
   const total = cueLen;
   const tipLen = 3, ferruleLen = 10, shaftLen = total * .52, jointLen = 6;
   const wrapLen = total * .18, buttLen = total - tipLen - ferruleLen - shaftLen - jointLen - wrapLen - 4;
@@ -2436,13 +2436,13 @@ function drawCueActor(ball, angle, power, alpha = 1) {
   }
 
   let t = 0;
-  // Tip — soft blue/green chalk
+  // Tip - soft blue/green chalk
   cueQuad(t, t + tipLen, 1.5, 2, '#6ba3a0', 'rgba(0,0,0,.2)');
   t += tipLen;
-  // Ferrule — white plastic
+  // Ferrule - white plastic
   cueQuad(t, t + ferruleLen, 2, 2.2, '#f0ece4', 'rgba(0,0,0,.15)');
   t += ferruleLen;
-  // Shaft — pale maple, light wood
+  // Shaft - pale maple, light wood
   const shaftG = Xx.createLinearGradient(
     nearX - dx * t, nearY - dy * t,
     nearX - dx * (t + shaftLen), nearY - dy * (t + shaftLen));
@@ -2452,10 +2452,10 @@ function drawCueActor(ball, angle, power, alpha = 1) {
   shaftG.addColorStop(1, '#dbb870');
   cueQuad(t, t + shaftLen, 2.2, 3.2, shaftG, 'rgba(120,80,30,.15)');
   t += shaftLen;
-  // Joint — metal ring
+  // Joint - metal ring
   cueQuad(t, t + jointLen, 3.2, 3.4, '#c0b8a8', 'rgba(60,50,30,.3)');
   t += jointLen;
-  // Wrap — dark leather/linen with cross-hatch pattern
+  // Wrap - dark leather/linen with cross-hatch pattern
   const wrapG = Xx.createLinearGradient(
     nearX - dx * t, nearY - dy * t,
     nearX - dx * (t + wrapLen), nearY - dy * (t + wrapLen));
@@ -2466,7 +2466,7 @@ function drawCueActor(ball, angle, power, alpha = 1) {
   wrapG.addColorStop(1, '#1a1a1a');
   cueQuad(t, t + wrapLen, 3.4, 4, wrapG, 'rgba(0,0,0,.25)');
   t += wrapLen;
-  // Butt — dark stained wood
+  // Butt - dark stained wood
   const buttG = Xx.createLinearGradient(
     nearX - dx * t, nearY - dy * t,
     nearX - dx * (t + buttLen), nearY - dy * (t + buttLen));
@@ -2569,12 +2569,12 @@ function pickCueBall(point) {
 function updateCueFromPoint(point) {
   const ball = selectedBall();
   if (!ball) return;
-  // Vector from touch TO ball — slingshot style (pull away to aim opposite)
+  // Vector from touch TO ball - slingshot style (pull away to aim opposite)
   const dx = ball.x - point.x;
   const dy = ball.y - point.y;
   const dist = Math.hypot(dx, dy);
   if (dist > 8) cue.angle = Math.atan2(dy, dx); // ball travels away from finger
-  // Eased power curve — slow start, ramps up, snappy at the end
+  // Eased power curve - slow start, ramps up, snappy at the end
   const raw = clamp((dist - 14) / 110, 0, 1);
   cue.power = raw < .05 ? 0 : raw * raw * (3 - 2 * raw); // smoothstep
   sendAimState();

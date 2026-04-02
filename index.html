@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Bumper Pool v2</title>
-<script>const APP_VERSION = 8;</script>
+<script>const APP_VERSION = 9;</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
@@ -42,28 +42,40 @@ body{
 }
 /* === GamePigeon-clean lobby === */
 .app{width:100%;max-width:480px;padding:0;display:flex;flex-direction:column;align-items:center}
-h1{
-  font-size:1.4rem;letter-spacing:.18em;text-transform:uppercase;
-  color:var(--gold);text-shadow:0 2px 12px rgba(200,169,110,.25);
-  padding:16px 0 0;margin:0
-}
+h1{display:none}
 .panel{
   width:100%;background:var(--bg);border:none;border-radius:0;box-shadow:none
 }
 #lobby{
   padding:0 16px 24px;display:flex;flex-direction:column;gap:0;
-  height:calc(100dvh);overflow:auto;-webkit-overflow-scrolling:touch
+  height:calc(100dvh);overflow:auto;-webkit-overflow-scrolling:touch;
+  justify-content:center;align-items:center
 }
 .section-title{font-size:.7rem;color:var(--gold);text-transform:uppercase;letter-spacing:.18em;margin-bottom:4px}
 .parallax-bg{display:none}
 .hero{
-  text-align:center;padding:20px 0 16px;border:none;border-radius:0;
+  text-align:center;padding:0 0 32px;border:none;border-radius:0;
   background:none;box-shadow:none
 }
+.hero-title{
+  font-family:'Georgia','Times New Roman',serif;
+  font-size:3rem;font-weight:700;letter-spacing:.04em;
+  color:#f0ead4;margin:0;line-height:1.05;
+  text-shadow:0 0 40px rgba(200,169,110,.3),0 2px 8px rgba(0,0,0,.5)
+}
+.hero-title span{
+  display:block;font-size:3.8rem;
+  background:linear-gradient(180deg,#e8d5a3 0%,#c8a96e 40%,#a0834a 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;filter:drop-shadow(0 2px 4px rgba(0,0,0,.4))
+}
+.hero-sub{
+  font-size:.85rem;color:#7a7260;letter-spacing:.15em;text-transform:uppercase;margin-top:8px
+}
 .hero-kicker{display:none}
-.hero h2{font-size:1.1rem;color:#c8a96e;letter-spacing:.06em;font-weight:normal;margin:0}
+.hero h2{display:none}
 .hero p{display:none}
-.lobby-stage{border-radius:0}
+.lobby-stage{border-radius:0;width:100%;max-width:360px}
 .lobby-step{display:none}
 .lobby-step.active{display:flex;flex-direction:column;gap:12px}
 .card{background:none;border:none;border-radius:0;padding:0;box-shadow:none}
@@ -219,56 +231,41 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
 
   <div id="lobby" class="panel">
     <div class="hero">
-      <h2>Bumper Pool</h2>
+      <div class="hero-title">Bumper<span>Pool</span></div>
+      <div class="hero-sub">Multiplayer</div>
+    </div>
+
+    <!-- hidden but kept for JS refs -->
+    <div style="display:none">
+      <div id="player-list"></div>
+      <button id="show-add-player-btn"></button>
+      <input id="new-player-input"><button id="add-player-btn"></button>
+      <div id="player-prompt"></div>
+      <button id="continue-btn"></button>
+      <section id="step-player" class="lobby-step"></section>
     </div>
 
     <div class="lobby-stage">
-      <section id="step-player" class="lobby-step active">
-        <div class="card step-shell">
-          <div class="step-head">
-            <div>
-              <div class="step-meta">Step 1</div>
-              <h3>Choose player</h3>
-            </div>
-            <div class="step-copy">Tap a profile or add one.</div>
-          </div>
-          <div id="player-list" class="player-grid"></div>
-          <div class="inline-actions">
-            <button class="ghost-btn" id="show-add-player-btn">Add Player</button>
-          </div>
-          <div id="add-player-inline" class="inline-add">
-            <input id="new-player-input" class="field" maxlength="18" placeholder="Player name">
-            <button class="primary-btn" id="add-player-btn">Save</button>
-          </div>
-          <div id="player-prompt" class="status"></div>
-          <div class="step-actions">
-            <button class="primary-btn" id="continue-btn" style="display:none">Continue</button>
-          </div>
-        </div>
-      </section>
-
       <section id="step-mode" class="lobby-step">
         <div class="card step-shell">
-          <div class="step-head">
-            <div class="step-meta">Step 2</div>
-            <h3>How do you want to play?</h3>
-          </div>
           <div class="mode-grid">
             <div class="action-card">
-              <div><h4>Host Room</h4><p>Create &amp; share code</p></div>
+              <div><h4>Create Game</h4><p>Host a room &amp; invite a friend</p></div>
               <button class="primary-btn" id="create-btn">Create</button>
             </div>
             <div class="action-card">
-              <div><h4>Join Room</h4></div>
-              <input id="join-input" class="field" placeholder="CODE" maxlength="4" style="text-transform:uppercase;width:90px;min-height:44px;text-align:center;flex-shrink:0">
-              <button class="secondary-btn" id="join-btn" style="width:auto;min-width:80px">Join</button>
+              <div><h4>Join Game</h4><p>Enter a room code</p></div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input id="join-input" class="field" placeholder="CODE" maxlength="4" style="text-transform:uppercase;width:90px;min-height:44px;text-align:center;flex-shrink:0">
+                <button class="secondary-btn" id="join-btn" style="width:auto;min-width:80px">Join</button>
+              </div>
             </div>
             <div class="action-card">
-              <div><h4>Play CPU</h4><p>Instant match</p></div>
+              <div><h4>Play CPU</h4><p>Practice against the computer</p></div>
               <button class="secondary-btn" id="ai-btn" style="width:auto;min-width:80px">Play</button>
             </div>
           </div>
-          <button class="ghost-btn" id="back-to-players-btn">← Back</button>
+          <button class="ghost-btn" id="back-to-players-btn" style="display:none">← Back</button>
           <div id="status-msg" class="status"></div>
         </div>
       </section>

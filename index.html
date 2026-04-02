@@ -1145,8 +1145,8 @@ function startSyncLoop() {
   if (syncTimer) clearInterval(syncTimer);
   if (isAI || !isHost) return;
   syncTimer = setInterval(() => {
-    if (connected && gameStarted && moving()) send(getFullState());
-  }, 4000);
+    if (connected && gameStarted) send(getFullState());
+  }, 3000);
 }
 
 function getFullState() {
@@ -1156,7 +1156,7 @@ function getFullState() {
     balls: balls.map(b => ({
       x:b.x,y:b.y,vx:b.vx,vy:b.vy,out:b.out,spin:b.spin,pocket:b.pocket,scale:b.scale,alpha:b.alpha
     })),
-    curP, phase, over, sunkThisTurn,
+    curP, phase, over, sunkThisTurn, firing,
     brk, breakStatus
   };
 }
@@ -1181,9 +1181,12 @@ function applyState(data) {
   phase = data.phase;
   over = data.over;
   sunkThisTurn = data.sunkThisTurn;
+  if (data.firing != null) firing = data.firing;
   brk = data.brk || brk;
   breakStatus = data.breakStatus || breakStatus;
+  updateScoreboard();
   updateTurnUI();
+  autoShowCue();
 }
 
 function roleName(role) {
@@ -1664,6 +1667,22 @@ function maybeScheduleAITurn() {
 }
 
 function stopped() {
+  // Guest in multiplayer: only clean up local state, don't decide turns.
+  // Host's state-sync is the source of truth for curP, phase, over, etc.
+  if (!isHost && !isAI && connected) {
+    firing = false;
+    penaltyState = null;
+    turnMeta = freshTurnMeta();
+    clearCue(false);
+    opponentAim = { active:false, ballIdx:-1, angle:-Math.PI / 2, power:0 };
+    updateScoreboard();
+    updateTurnUI();
+    autoShowCue();
+    // Request a sync in case we missed the host's turn-change message
+    send({ type:'sync-request' });
+    return;
+  }
+
   if (penaltyState) {
     penaltyState = null;
     checkWin();

@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Bumper Pool v2</title>
-<script>const APP_VERSION = 7;</script>
+<script>const APP_VERSION = 8;</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
@@ -586,8 +586,9 @@ function updatePlayerPrompt() {
   $('continue-btn').style.display = selectedPlayer ? 'inline-flex' : 'none';
 }
 
-renderPlayerCards();
-updatePlayerPrompt();
+// Skip player selection — go straight to mode select
+selectedPlayer = 'Player 1';
+setLobbyStep('mode');
 
 $('show-add-player-btn').addEventListener('click', () => toggleAddPlayer());
 $('add-player-btn').addEventListener('click', addPlayer);
@@ -661,6 +662,8 @@ function setStatus(html) {
 }
 
 function ensurePlayerSelected() {
+  if (!selectedPlayer) selectedPlayer = 'Player 1';
+  return true;
   if (selectedPlayer) return true;
   $('player-prompt').textContent = 'Select or add a player before continuing.';
   return false;
@@ -672,7 +675,7 @@ function getJoinUrl() {
 
 function updateMyProfile() {
   if (!myRole) return;
-  playerProfiles[myRole].name = selectedPlayer || (myRole === 'p1' ? 'Player 1' : 'Player 2');
+  playerProfiles[myRole].name = myRole === 'p1' ? 'Player 1' : 'Player 2';
   updateScoreboard();
 }
 
@@ -797,7 +800,7 @@ function startAIGame() {
   myRole = 'p1';
   scoreSyncSent = false;
   clearAITimers();
-  playerProfiles.p1 = { name: selectedPlayer || 'Player 1' };
+  playerProfiles.p1 = { name: 'Player 1' };
   playerProfiles.p2 = { name: 'CPU' };
   history.replaceState(null, '', window.location.pathname);
   hideDisconnectOverlay();

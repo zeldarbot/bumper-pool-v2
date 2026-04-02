@@ -731,7 +731,7 @@ function createGame() {
   updateMyProfile();
   showWaitingStep('Waiting for opponent', 'Your private room is live. Send the link or code to the other player.', true);
   setStatus('Creating room...');
-  history.replaceState(null, '', '?host=' + currentCode);
+  history.replaceState(null, '', '?join=' + currentCode);
   initPeerAsHost();
 }
 
@@ -833,7 +833,12 @@ function initPeerAsGuest() {
   });
   startConnectTimeout(15000, 'Could not connect. Room may not exist or host may be offline.');
   peer.on('open', () => {
+    setStatus('Found server. Connecting to room...');
     conn = peer.connect('bpool2-' + currentCode, { reliable:true, serialization:'json' });
+    if (!conn) {
+      setStatus('<span class="conn-dot conn-red"></span>Failed to create connection. <button class="chip" style="display:inline;width:auto;min-height:36px;padding:0 16px;font-size:.85rem;margin-left:8px" onclick="location.reload()">Retry</button>');
+      return;
+    }
     setupConn();
   });
   peer.on('disconnected', () => { if (!peer.destroyed) setTimeout(() => peer.reconnect(), 1000); });
@@ -2539,7 +2544,7 @@ $('rb').onclick = requestRematch;
 
 (function autoJoin() {
   const params = new URLSearchParams(window.location.search);
-  const joinCode = params.get('join');
+  const joinCode = params.get('join') || params.get('host');
   if (joinCode) {
     $('join-input').value = joinCode.toUpperCase();
     setTimeout(joinGame, 350);

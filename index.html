@@ -333,6 +333,7 @@ canvas{display:block;border-radius:22px;max-width:100%;touch-action:none;cursor:
       <div id="win-stats" class="overlay-copy"></div>
       <div id="rematch-status"></div>
       <button id="rb" class="primary-btn">Play Again</button>
+      <button id="lobby-btn" class="primary-btn" style="display:none;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);margin-top:6px;font-size:.82rem">Back to Menu</button>
     </div>
   </div>
 </div>
@@ -1072,6 +1073,7 @@ let af = 0;
 let stateSeq = 0;
 let lastSyncedSeq = 0;
 let rematch = { mine:false, opp:false, startedAt:0 };
+let rematchWaitTimer = null;
 
 const POCKETS = [
   { x: CX, y: IT + 11, targetFor:'p1', homeFor:'p2' },  // ~1" into playing surface
@@ -1207,6 +1209,7 @@ function initGameState() {
   turnMeta = freshTurnMeta();
   penaltyState = null;
   rematch = { mine:false, opp:false, startedAt:0 };
+  if (rematchWaitTimer) { clearTimeout(rematchWaitTimer); rematchWaitTimer = null; }
   resultRecorded = false;
   stateSeq = 0;
   lastSyncedSeq = 0;
@@ -1216,6 +1219,7 @@ function initGameState() {
   $('rb').disabled = false;
   $('rb').textContent = 'Play Again';
   $('rematch-status').textContent = '';
+  $('lobby-btn').style.display = 'none';
   Confetti.stop();
   updateScoreboard();
   updateTurnUI();
@@ -1534,8 +1538,9 @@ function resolveInstantLoss(loss) {
   $('win-stats').innerHTML = `${loss.reason}<br>${matchupSummary(winnerName, loserName)}`;
   $('ov').classList.add('show');
   $('rematch-status').textContent = '';
-  $('rb').textContent = 'Play Again';
+  $('rb').textContent = !isAI && !connected ? 'Back to Menu' : 'Play Again';
   $('rb').disabled = false;
+  $('lobby-btn').style.display = !isAI && !connected ? '' : 'none';
   AudioEngine.win();
   Confetti.launch(winnerRole === 'p1' ? 'red' : 'white');
   updateScoreboard();
@@ -1868,8 +1873,9 @@ function checkWin() {
   $('win-stats').innerHTML = matchupSummary(winnerName, loserName);
   $('ov').classList.add('show');
   $('rematch-status').textContent = '';
-  $('rb').textContent = 'Play Again';
+  $('rb').textContent = !isAI && !connected ? 'Back to Menu' : 'Play Again';
   $('rb').disabled = false;
+  $('lobby-btn').style.display = !isAI && !connected ? '' : 'none';
   AudioEngine.win();
   Confetti.launch(winnerRole === 'p1' ? 'red' : 'white');
   if (navigator.vibrate) navigator.vibrate([120, 60, 160]);
@@ -2656,21 +2662,60 @@ function triggerRematchStart() {
   initGameState();
 }
 
+function returnToLobby() {
+  if (rematchWaitTimer) { clearTimeout(rematchWaitTimer); rematchWaitTimer = null; }
+  destroyPeer();
+  clearAITimers();
+  over = false;
+  gameStarted = false;
+  Confetti.stop();
+  $('ov').classList.remove('show');
+  $('lobby-btn').style.display = 'none';
+  $('game').style.display = 'none';
+  $('lobby').style.display = '';
+  setLobbyStep('mode');
+  history.replaceState(null, '', window.location.pathname);
+}
+
+function showLobbyButton() {
+  $('lobby-btn').style.display = '';
+  $('rematch-status').textContent = 'Opponent not responding.';
+  $('rb').textContent = 'Play Again';
+  $('rb').disabled = false;
+  rematch.mine = false;
+  rematch.startedAt = 0;
+}
+
 function requestRematch() {
   if (isAI) {
     if (!over) return;
     initGameState();
     return;
   }
-  if (!over || rematch.mine) return;
+  if (!over) return;
+  // If not connected, go straight back to lobby
+  if (!connected) {
+    returnToLobby();
+    return;
+  }
+  // Allow re-clicking after timeout reset
+  if (rematch.mine) return;
   rematch.mine = true;
   rematch.startedAt = Date.now();
   send({ type:'rematch-request', role:myRole });
   updateRematchStatus();
   if (isHost && rematch.opp) triggerRematchStart();
+  // Show Back to Menu after 8 seconds if opponent doesn't respond
+  if (rematchWaitTimer) clearTimeout(rematchWaitTimer);
+  rematchWaitTimer = setTimeout(() => {
+    if (over && rematch.mine && !rematch.opp) {
+      showLobbyButton();
+    }
+  }, 8000);
 }
 
 $('rb').onclick = requestRematch;
+$('lobby-btn').onclick = returnToLobby;
 
 (function autoJoin() {
   const params = new URLSearchParams(window.location.search);
